@@ -168,6 +168,14 @@ async function main() {
     prisma.announcement.deleteMany(),
     prisma.trainingAssignment.deleteMany(),
     prisma.trainingTemplate.deleteMany(),
+    prisma.inventoryMovement.deleteMany(),
+    prisma.orderStatusHistory.deleteMany(),
+    prisma.couponRedemption.deleteMany(),
+    prisma.order.deleteMany(),
+    prisma.coupon.deleteMany(),
+    prisma.shippingAddress.deleteMany(),
+    prisma.cartItem.deleteMany(),
+    prisma.cart.deleteMany(),
     prisma.attendance.deleteMany(),
     prisma.payment.deleteMany(),
     prisma.subscription.deleteMany(),
@@ -883,11 +891,17 @@ async function main() {
         slug: "luva-boxe-maquina-team-12oz",
         sku: "MT-LUVA-12OZ",
         category: "Luvas e protecao",
+        shortDescription: "Luva premium para manopla, saco e sparring leve.",
         description: "Luva para treino técnico e sparring leve com fechamento em velcro.",
         status: "ACTIVE",
         priceCents: 19900,
         stockQuantity: 12,
         lowStockThreshold: 3,
+        featured: true,
+        weightGrams: 620,
+        heightCm: 16,
+        widthCm: 22,
+        lengthCm: 34,
       },
     }),
     prisma.product.create({
@@ -896,10 +910,16 @@ async function main() {
         slug: "bandagem-elastica-profissional-4m",
         sku: "MT-BAND-4M",
         category: "Acessorios",
+        shortDescription: "Bandagem essencial para protecao de punhos e encaixe da luva.",
         description: "Bandagem elástica para proteção de punhos e metacarpos.",
         status: "ACTIVE",
         priceCents: 3900,
         stockQuantity: 40,
+        featured: true,
+        weightGrams: 110,
+        heightCm: 6,
+        widthCm: 10,
+        lengthCm: 14,
       },
     }),
     prisma.product.create({
@@ -908,10 +928,15 @@ async function main() {
         slug: "caneleira-muay-thai-pro",
         sku: "MT-CAN-001",
         category: "Protecao",
+        shortDescription: "Caneleira de alto impacto para treino tecnico e rounds de clinch.",
         description: "Caneleira de treino com espuma de alta densidade para absorção de impacto.",
         status: "ACTIVE",
         priceCents: 24900,
         stockQuantity: 8,
+        weightGrams: 950,
+        heightCm: 18,
+        widthCm: 20,
+        lengthCm: 38,
       },
     }),
     prisma.product.create({
@@ -920,10 +945,16 @@ async function main() {
         slug: "camiseta-dry-fit-maquina-team",
         sku: "MT-CAM-DRY",
         category: "Vestuario",
+        shortDescription: "Camiseta oficial da academia com secagem rapida e visual clean.",
         description: "Camiseta oficial para treinos com tecido leve e secagem rápida.",
         status: "ACTIVE",
         priceCents: 7900,
         stockQuantity: 25,
+        featured: true,
+        weightGrams: 210,
+        heightCm: 3,
+        widthCm: 28,
+        lengthCm: 32,
       },
     }),
   ]);
@@ -1017,6 +1048,199 @@ async function main() {
         unitPriceCents: productMap["bandagem-elastica-profissional-4m"].priceCents,
       },
     ],
+  });
+
+  const [aliceShippingAddress, , welcomeCoupon] = await Promise.all([
+    prisma.shippingAddress.create({
+      data: {
+        userId: aliceUser.id,
+        label: "Casa",
+        recipientName: "Alice Nogueira",
+        recipientPhone: aliceUser.phone ?? "(32) 99150-7910",
+        zipCode: "36015000",
+        state: "MG",
+        city: "Juiz de Fora",
+        district: "Centro",
+        street: "Rua Fonseca Hermes",
+        number: "45",
+        complement: "Apto 201",
+        reference: "Proximo ao centro",
+        isDefault: true,
+      },
+    }),
+    prisma.shippingAddress.create({
+      data: {
+        userId: brunoUser.id,
+        label: "Retirada e apoio",
+        recipientName: "Bruno Tavares",
+        recipientPhone: brunoUser.phone ?? "(32) 99150-7911",
+        zipCode: "36013010",
+        state: "MG",
+        city: "Juiz de Fora",
+        district: "Centro",
+        street: "Av. Barao do Rio Branco",
+        number: "1200",
+        reference: "Sala comercial",
+        isDefault: true,
+      },
+    }),
+    prisma.coupon.create({
+      data: {
+        code: "BEMVINDO10",
+        description: "Desconto de boas-vindas para a primeira compra online da loja.",
+        discountType: "PERCENTAGE",
+        discountValue: 10,
+        active: true,
+        usageLimit: 50,
+        perUserLimit: 1,
+        minOrderValueCents: 12000,
+        eligibleCategories: ["Vestuario", "Acessorios"],
+      },
+    }),
+  ]);
+
+  const onlineOrder = await prisma.$transaction(async (tx) => {
+    const orderItems = [
+      {
+        productId: productMap["bandagem-elastica-profissional-4m"].id,
+        quantity: 3,
+        unitPriceCents: productMap["bandagem-elastica-profissional-4m"].priceCents,
+        productName: productMap["bandagem-elastica-profissional-4m"].name,
+        productSlug: productMap["bandagem-elastica-profissional-4m"].slug,
+        productSku: productMap["bandagem-elastica-profissional-4m"].sku,
+        productCategory: productMap["bandagem-elastica-profissional-4m"].category,
+        productImageUrl: "/images/mulher_lutando.jpg",
+      },
+      {
+        productId: productMap["camiseta-dry-fit-maquina-team"].id,
+        quantity: 1,
+        unitPriceCents: productMap["camiseta-dry-fit-maquina-team"].priceCents,
+        productName: productMap["camiseta-dry-fit-maquina-team"].name,
+        productSlug: productMap["camiseta-dry-fit-maquina-team"].slug,
+        productSku: productMap["camiseta-dry-fit-maquina-team"].sku,
+        productCategory: productMap["camiseta-dry-fit-maquina-team"].category,
+        productImageUrl: "/images/logo.jpg",
+      },
+    ];
+    const subtotalCents = orderItems.reduce(
+      (total, item) => total + item.quantity * item.unitPriceCents,
+      0,
+    );
+    const discountCents = Math.round(subtotalCents * 0.1);
+    const shippingCents = 1490;
+    const totalCents = subtotalCents - discountCents + shippingCents;
+
+    const order = await tx.order.create({
+      data: {
+        orderNumber: "PED-20260331-1001",
+        userId: aliceUser.id,
+        couponId: welcomeCoupon.id,
+        status: "PROCESSING",
+        paymentStatus: "PAID",
+        paymentMethod: "PIX",
+        deliveryMethod: "LOCAL_DELIVERY",
+        deliveryLabel: "Entrega local",
+        shippingEstimatedDays: 2,
+        subtotalCents,
+        discountCents,
+        shippingCents,
+        totalCents,
+        customerName: aliceUser.name,
+        customerEmail: aliceUser.email,
+        customerPhone: aliceUser.phone ?? "(32) 99150-7910",
+        customerDocument: "11111111111",
+        shippingAddressLabel: aliceShippingAddress.label,
+        shippingRecipientName: aliceShippingAddress.recipientName,
+        shippingRecipientPhone: aliceShippingAddress.recipientPhone,
+        shippingZipCode: aliceShippingAddress.zipCode,
+        shippingState: aliceShippingAddress.state,
+        shippingCity: aliceShippingAddress.city,
+        shippingDistrict: aliceShippingAddress.district,
+        shippingStreet: aliceShippingAddress.street,
+        shippingNumber: aliceShippingAddress.number,
+        shippingComplement: aliceShippingAddress.complement,
+        shippingReference: aliceShippingAddress.reference,
+        paidAt: addDays(baseDay, -1),
+        items: {
+          create: orderItems.map((item) => ({
+            productId: item.productId,
+            productName: item.productName,
+            productSlug: item.productSlug,
+            productSku: item.productSku,
+            productCategory: item.productCategory,
+            productImageUrl: item.productImageUrl,
+            quantity: item.quantity,
+            unitPriceCents: item.unitPriceCents,
+            lineTotalCents: item.quantity * item.unitPriceCents,
+          })),
+        },
+        statusHistory: {
+          create: [
+            {
+              status: "CONFIRMED",
+              note: "Pedido confirmado automaticamente no seed da loja.",
+              changedByUserId: adminUser.id,
+            },
+            {
+              status: "PROCESSING",
+              note: "Pedido em separacao pela equipe da recepcao.",
+              changedByUserId: receptionUser.id,
+            },
+          ],
+        },
+      },
+      select: {
+        id: true,
+        orderNumber: true,
+        totalCents: true,
+      },
+    });
+
+    await tx.coupon.update({
+      where: {
+        id: welcomeCoupon.id,
+      },
+      data: {
+        usageCount: {
+          increment: 1,
+        },
+      },
+    });
+
+    await tx.couponRedemption.create({
+      data: {
+        couponId: welcomeCoupon.id,
+        orderId: order.id,
+        userId: aliceUser.id,
+        discountCents,
+      },
+    });
+
+    for (const item of orderItems) {
+      await tx.product.update({
+        where: {
+          id: item.productId,
+        },
+        data: {
+          stockQuantity: {
+            decrement: item.quantity,
+          },
+        },
+      });
+
+      await tx.inventoryMovement.create({
+        data: {
+          productId: item.productId,
+          orderId: order.id,
+          type: "ORDER_RESERVE",
+          quantityDelta: item.quantity * -1,
+          reason: "Reserva de estoque do pedido online seed",
+          performedByUserId: adminUser.id,
+        },
+      });
+    }
+
+    return order;
   });
 
   const announcements = await Promise.all([
@@ -1121,6 +1345,17 @@ async function main() {
           totalCents: saleOne.totalCents,
         },
       },
+      {
+        actorId: adminUser.id,
+        action: "STORE_ORDER_CREATED",
+        entityType: "Order",
+        entityId: onlineOrder.id,
+        summary: "Pedido online da loja criado para Alice com cupom de boas-vindas.",
+        afterData: {
+          orderNumber: onlineOrder.orderNumber,
+          totalCents: onlineOrder.totalCents,
+        },
+      },
     ],
   });
 
@@ -1136,6 +1371,9 @@ async function main() {
     attendances: await prisma.attendance.count(),
     products: await prisma.product.count(),
     sales: await prisma.productSale.count(),
+    shippingAddresses: await prisma.shippingAddress.count(),
+    coupons: await prisma.coupon.count(),
+    orders: await prisma.order.count(),
     trainingTemplates: await prisma.trainingTemplate.count(),
     trainingAssignments: await prisma.trainingAssignment.count(),
     announcements: await prisma.announcement.count(),

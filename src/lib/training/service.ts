@@ -6,15 +6,10 @@ import {
   UserRole,
 } from "@prisma/client";
 import {
-  endOfDay,
-  formatDate,
-  getWeekdayLabels,
   slugify,
   startOfDay,
 } from "@/lib/academy/constants";
 import {
-  ensureVisibleStudent,
-  getClassScheduleVisibilityWhere,
   getModalityVisibilityWhere,
   getStudentVisibilityWhere,
   getTeacherVisibilityWhere,

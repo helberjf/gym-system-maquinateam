@@ -11,7 +11,6 @@ import { flattenSearchParams } from "@/lib/academy/presentation";
 import { requirePermission } from "@/lib/auth/guards";
 import {
   getTrainingAssignmentStatusLabel,
-  getAnnouncementTargetLabel,
 } from "@/lib/training/constants";
 import { getTrainingAssignmentTone } from "@/lib/training/presentation";
 import { getTrainingHubData } from "@/lib/training/service";

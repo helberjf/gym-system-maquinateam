@@ -1,10 +1,10 @@
 # Maquina Team Gym System
 
-Plataforma full-stack para academia de luta com site publico moderno, autenticacao completa, operacao interna por perfil e modulos de alunos, professores, modalidades, turmas, presenca, financeiro, produtos, vendas, treinos, avisos, dashboards e relatorios.
+Plataforma full-stack para academia de luta com site publico moderno, autenticacao completa, operacao interna por perfil e modulos de alunos, professores, modalidades, turmas, presenca, financeiro, produtos, vendas, e-commerce, treinos, avisos, dashboards e relatorios.
 
 ## Status
 
-Fase 10 concluida.
+Fase 11 concluida.
 
 O produto agora entrega:
 
@@ -14,6 +14,7 @@ O produto agora entrega:
 - modulos operacionais da academia
 - financeiro principal com inadimplencia
 - produtos, vendas e upload em Cloudflare R2
+- e-commerce completo com catalogo publico, carrinho, checkout, frete, cupons e pedidos
 - treinos e avisos
 - dashboards administrativos e relatorios com CSV
 - smoke tests para fluxos centrais
@@ -46,6 +47,10 @@ O produto agora entrega:
 Publico:
 
 - `GET /home`
+- `GET /loja`
+- `GET /loja/[slug]`
+- `GET /carrinho`
+- `GET /checkout`
 - `GET /planos`
 - `GET /contato`
 - `GET /faq`
@@ -70,6 +75,11 @@ Privado:
 - `GET /dashboard/pagamentos`
 - `GET /dashboard/produtos`
 - `GET /dashboard/vendas`
+- `GET /dashboard/pedidos`
+- `GET /dashboard/pedidos/[id]`
+- `GET /dashboard/pedidos-loja`
+- `GET /dashboard/pedidos-loja/[id]`
+- `GET /dashboard/cupons`
 - `GET /dashboard/treinos`
 - `GET /dashboard/avisos`
 - `GET /dashboard/relatorios`
@@ -84,6 +94,14 @@ APIs importantes:
 - `POST /api/attendance/check-out`
 - `POST /api/training-assignments`
 - `POST /api/uploads/product-images`
+- `GET /api/store/cart`
+- `POST /api/store/cart/items`
+- `PATCH /api/store/cart/items/[itemId]`
+- `POST /api/store/coupon`
+- `POST /api/store/shipping/quote`
+- `POST /api/store/checkout`
+- `POST /api/store/coupons`
+- `PATCH /api/store/orders/[id]/status`
 - `GET /api/reports/export`
 
 ## Arquitetura final
@@ -96,6 +114,7 @@ As regras principais ficaram separadas por contexto:
 - `src/lib/academy`
 - `src/lib/billing`
 - `src/lib/commerce`
+- `src/lib/store`
 - `src/lib/training`
 - `src/lib/reports`
 
@@ -113,9 +132,9 @@ Cada modulo concentra regras, filtros, consultas e mutacoes sem jogar tudo dentr
 
 ### 3. Banco e persistencia
 
-- Prisma modela auth, operacao, financeiro, vendas, treinos e auditoria
+- Prisma modela auth, operacao, financeiro, vendas, loja, treinos e auditoria
 - PostgreSQL e a fonte principal de dados
-- seed inicial cria perfis, modalidades, planos, alunos, assinaturas, pagamentos, produtos, vendas, treinos e avisos
+- seed inicial cria perfis, modalidades, planos, alunos, assinaturas, pagamentos, produtos, vendas, cupons, enderecos, pedidos, treinos e avisos
 
 ### 4. Frontend
 
@@ -172,6 +191,21 @@ Cada modulo concentra regras, filtros, consultas e mutacoes sem jogar tudo dentr
 - baixa automatica de estoque
 - alerta de estoque baixo
 
+### E-commerce da loja
+
+- CTA publica da loja integrada na home
+- catalogo publico com busca, filtros e ordenacao
+- pagina de detalhe de produto
+- carrinho server-side para visitante e usuario autenticado
+- merge de carrinho no login
+- checkout com endereco, frete e cupom
+- frete interno com retirada, entrega local e envio padrao
+- CRUD administrativo de cupons
+- pedidos com snapshot de itens, status e pagamento
+- historico de pedidos para o cliente
+- operacao administrativa de pedidos e atualizacao de status
+- movimentos de estoque e restauracao no cancelamento
+
 ### Treinos e comunicacao
 
 - modelos de treino
@@ -199,6 +233,7 @@ Camadas aplicadas:
 - reset de senha com token seguro de uso unico
 - autorizacao por role em middleware, servidor e handlers
 - rate limit em auth, uploads, mutacoes, admin e relatorios
+- rate limit em carrinho, cupom, checkout, CRUD de cupom e status de pedidos
 - logs minimos de auditoria
 - validacao centralizada com Zod
 
@@ -216,6 +251,10 @@ Rate limit aplicado hoje em:
 - check-in/check-out
 - treinos
 - turmas
+- carrinho e checkout
+- validacao de cupom
+- CRUD de cupons
+- atualizacao de status de pedidos
 - endpoints administrativos
 - exportacao de relatorios
 
@@ -238,6 +277,7 @@ Comandos:
 ```bash
 npm run test
 npm run test:run
+npm run typecheck
 ```
 
 ## Setup local
