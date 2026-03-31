@@ -1,185 +1,69 @@
-# Maquina Team - Site de Academia de Lutas
-https://site-gym-test.vercel.app/
-Site institucional da Maquina Team com integração de pagamentos via Mercado Pago.
+# Maquina Team � Sistema de Academia
 
-## 🚀 Tecnologias
+Sistema full-stack profissional para academia de luta **Maquina Team** (Juiz de Fora - MG).
 
-- **Front-end**: HTML5, CSS3, JavaScript (Vanilla), Bootstrap 4.5
-- **Back-end**: Node.js, Express, Cors
-- **Pagamentos**: Mercado Pago SDK
-- **Deploy**: Vercel
+## Stack
 
-## 📁 Estrutura do Projeto
+| Camada | Tecnologia |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Linguagem | TypeScript |
+| Estilo | Tailwind CSS v4 |
+| Banco de dados | PostgreSQL |
+| ORM | Prisma |
+| Autentica��o | Auth.js v5 (NextAuth) |
+| Valida��o | Zod + React Hook Form |
+| Hashing | bcryptjs |
+| Pagamento | Mercado Pago SDK |
+| Storage | Cloudflare R2 |
+| E-mail | Mailgun |
+| Deploy | Vercel |
 
-```
-/
-├── api/                 # API Serverless (Vercel)
-│   ├── index.js
-│   └── package.json     # dependências da API
-├── back-end/            # aparentemente uma pasta back-end — pode haver código aqui
-├── front-end/           # front-end estático
-│   ├── index.html
-│   ├── script.js
-│   ├── styles.css
-│   ├── images/          # imagens do site
-│   └── outras *.html (success, failure etc)
-├── .gitignore
-├── CHECKLIST.md
-├── DEPLOY.md
-├── OTIMIZACOES.md
-├── README.md
-├── package.json         # dependências gerais do projeto
-├── package-lock.json
-├── script.js            # possivelmente utilitário ou script de build
-├── vercel.json          # configuração de deploy no Vercel
+## Estrutura de pastas
 
-```
+\\\
+src/
+  app/
+    (public)/          # P�ginas p�blicas: home, faq
+    (auth)/            # Login, cadastro
+    (dashboard)/       # �rea logada: painel, check-ins, pagamentos
+    api/               # API Routes (Next.js)
+  components/
+    layout/            # Navbar, Footer
+    ui/                # Button, Input, Card...
+  features/            # M�dulos de neg�cio (Fase 2+)
+  lib/
+    constants/         # brand.ts, plans.ts
+  types/               # Tipos globais TypeScript
+prisma/
+  schema.prisma        # Schema completo do banco
+public/
+  images/              # Logo, fotos da academia
+\\\
 
-## 🔧 Configuração Local
+## Roadmap
 
-### Pré-requisitos
+| Fase | Descri��o | Status |
+|---|---|---|
+| **Fase 1** | Base arquitetural (Next.js, Tailwind, Prisma schema, placeholders) | ? Conclu�da |
+| **Fase 2** | Autentica��o completa (Auth.js v5, PostgreSQL, cadastro real) | ? Planejada |
+| **Fase 3** | Planos, matr�culas e pagamentos (Mercado Pago) | ? Planejada |
+| **Fase 4** | Check-in/check-out de alunos | ? Planejada |
+| **Fase 5** | Relat�rios e dashboard analytics | ? Planejada |
+| **Fase 6** | Notifica��es (Mailgun) e upload (Cloudflare R2) | ? Planejada |
 
-- Node.js 18+ instalado
-- Conta no Mercado Pago (para credenciais de API)
+## Como rodar
 
-### Instalação
-
-1. Clone o repositório:
-```bash
-git clone <seu-repositorio>
-cd site-gym
-```
-
-2. Instale as dependências da API:
-```bash
-cd api
+\\\ash
 npm install
-```
+cp .env.example .env.local   # preencher as vari�veis
+npm run dev
+\\\
 
-3. Configure as variáveis de ambiente:
-   - Crie um arquivo `.env` na pasta `api/`
-   - Adicione suas credenciais do Mercado Pago:
-```env
-MP_ACCESS_TOKEN=seu_access_token_aqui
-```
+## Branding
 
-4. Inicie a API localmente:
-```bash
-cd api
-node index.js
-```
-A API estará rodando em `http://localhost:8080`
-
-5. Para testar o front-end:
-   - Abra `front-end/index.html` no navegador
-   - Ou use um servidor local (ex: `python -m http.server` na pasta front-end)
-
-## 🌐 Deploy no Vercel
-
-### Configuração via GitHub
-
-1. **Crie um repositório no GitHub** e faça push do código:
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/seu-usuario/site-gym.git
-git push -u origin main
-```
-
-2. **Conecte ao Vercel**:
-   - Acesse [vercel.com](https://vercel.com)
-   - Faça login com sua conta GitHub
-   - Clique em "New Project"
-   - Importe o repositório `site-gym`
-
-3. **Configure as variáveis de ambiente** no Vercel:
-   - Vá em Settings → Environment Variables
-   - Adicione:
-     - `MP_ACCESS_TOKEN`: Seu Access Token do Mercado Pago
-     - (Opcional) Outras variáveis conforme necessário
-
-4. **Deploy automático**:
-   - O Vercel detectará automaticamente o `vercel.json`
-   - O deploy será feito automaticamente a cada push no GitHub
-
-### Configuração Manual (Vercel CLI)
-
-```bash
-npm i -g vercel
-vercel login
-vercel
-```
-
-## 📝 Variáveis de Ambiente
-
-### Obrigatórias
-
-- `MP_ACCESS_TOKEN`: Token de acesso do Mercado Pago (Production ou Sandbox)
-
-### Opcionais
-
-- `MP_INTEGRATOR_ID`: ID do integrador (já configurado como `dev_24c65fb163bf11ea96500242ac130004` no código)
-
-- `MP_BACK_URL_SUCCESS`: URL de redirecionamento após pagamento aprovado
-- `MP_BACK_URL_FAILURE`: URL de redirecionamento após pagamento recusado
-- `MP_BACK_URL_PENDING`: URL de redirecionamento para pagamento pendente
-- `MP_NOTIFICATION_URL`: URL do webhook para notificações
-- `MP_MAX_INSTALLMENTS`: Número máximo de parcelas (padrão: 1)
-
-## 🔑 Obter Credenciais do Mercado Pago
-
-1. Acesse [mercadopago.com.br](https://www.mercadopago.com.br)
-2. Faça login na sua conta
-3. Vá em [Desenvolvedores](https://www.mercadopago.com.br/developers)
-4. Crie uma aplicação
-5. Copie o **Access Token** (Production ou Test)
-
-## 🧪 Testar Pagamentos
-
-### Ambiente de Teste (Sandbox)
-
-Use credenciais de teste do Mercado Pago para testar sem realizar pagamentos reais.
-
-### Cartões de Teste
-
-- **Aprovado**: 5031 4332 1540 6351
-- **Recusado**: 5031 4332 1540 6352
-- CVV: 123
-- Data: 11/30
-- Nome: APRO Demo
-- Email: 
-- CPF: 12345678909
-- Usuario Teste: TESTUSER5576313915996878460
-- Senha: eRvDcIrPT0
-- Email: test_user_5576313915996878469@testuser.com
-
-## 📦 Scripts Disponíveis
-
-### API
-```bash
-cd api
-npm start      # Inicia o servidor
-npm run dev    # Modo desenvolvimento (com nodemon)
-```
-
-## 🛠️ Estrutura da API
-
-### Endpoints
-
-- `POST /api/create-preference` - Cria uma preferência de pagamento
-- `GET /api/ping` - Health check
-- `POST /api/webhook` - Webhook do Mercado Pago
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
-
-## 👥 Suporte
-
-Para dúvidas ou problemas, abra uma issue no repositório.
-
----
-
-**Desenvolvido para Maquina Team** 🥊
-
+- **Nome**: Maquina Team
+- **Slogan**: Se transforme em uma M�quina!
+- **Modalidades**: Muay Thai, Kickboxing, Funcional, Boxe Team
+- **Endere�o**: R. Fonseca Hermes, 5 - Centro, Juiz de Fora - MG
+- **Contato**: (32) 99150-7929 | maquinateam.adm@gmail.com

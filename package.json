@@ -1,19 +1,42 @@
 {
-  "name": "site-gym",
-  "version": "1.0.0",
-  "description": "Maquina Team - Site de Academia de Lutas com integração Mercado Pago",
+  "name": "maquinateam-gym-system",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev:api": "cd api && npm run dev",
-    "start:api": "cd api && npm start",
-    "install:all": "cd api && npm install"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio"
   },
-  "keywords": [
-    "academia",
-    "lutas",
-    "mercadopago",
-    "payment"
-  ],
-  "author": "",
-  "license": "MIT"
+  "dependencies": {
+    "next": "^16.2.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "zod": "^3.24.0",
+    "react-hook-form": "^7.54.0",
+    "@hookform/resolvers": "^3.10.0",
+    "bcryptjs": "^2.4.3",
+    "@prisma/client": "^6.0.0",
+    "mercadopago": "^2.10.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "postcss": "^8.5.0",
+    "prisma": "^6.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.0.0",
+    "@eslint/eslintrc": "^3.0.0"
+  },
+  "notes": {
+    "next-auth": "Auth.js v5 (next-auth@beta) será adicionado na Fase 2"
+  }
 }
