@@ -128,10 +128,10 @@ export default async function ProductSaleDetailPage({
                   <img
                     src={item.product.images[0].url}
                     alt={item.product.name}
-                    className="h-20 w-full object-cover"
+                    className="aspect-[4/3] w-full object-cover md:h-20 md:w-[88px] md:aspect-auto"
                   />
                 ) : (
-                  <div className="flex h-20 items-center justify-center text-xs text-brand-gray-light">
+                  <div className="flex aspect-[4/3] items-center justify-center text-xs text-brand-gray-light md:h-20 md:w-[88px] md:aspect-auto">
                     Sem imagem
                   </div>
                 )}

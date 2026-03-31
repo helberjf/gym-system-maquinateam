@@ -182,7 +182,7 @@ export function ProductImageUploader({
                 <img
                   src={image.url}
                   alt={image.altText || "Preview da imagem do produto"}
-                  className="h-28 w-full object-cover"
+                  className="aspect-[4/3] w-full object-cover lg:h-28 lg:w-28 lg:aspect-auto"
                 />
               </div>
 

@@ -29,6 +29,7 @@
 
   body {
     min-height: 100vh;
+    overflow-x: clip;
     background:
       radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 28%),
       linear-gradient(180deg, #090909 0%, #050505 100%);
@@ -47,6 +48,15 @@
     font-family: var(--font-heading);
     font-weight: 700;
     letter-spacing: 0.02em;
+  }
+
+  img,
+  picture,
+  video,
+  canvas,
+  svg {
+    display: block;
+    max-width: 100%;
   }
 
   a,

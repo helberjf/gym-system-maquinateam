@@ -10,7 +10,7 @@ export function PublicPlanCard({ plan }: PublicPlanCardProps) {
   return (
     <article
       className={[
-        "flex h-full flex-col rounded-[2rem] border p-6",
+        "flex h-full flex-col rounded-[2rem] border p-5 sm:p-6",
         plan.featured
           ? "border-white bg-white text-black shadow-[0_20px_80px_rgba(255,255,255,0.08)]"
           : "border-brand-gray-mid bg-brand-gray-dark text-white",
@@ -26,7 +26,7 @@ export function PublicPlanCard({ plan }: PublicPlanCardProps) {
           >
             {PLAN_PERIOD_LABELS[plan.period]}
           </p>
-          <h3 className="mt-3 text-3xl font-bold uppercase">{plan.name}</h3>
+          <h3 className="mt-3 text-2xl font-bold uppercase sm:text-3xl">{plan.name}</h3>
         </div>
         {plan.badge ? (
           <span
@@ -55,7 +55,7 @@ export function PublicPlanCard({ plan }: PublicPlanCardProps) {
         <p className="text-xs uppercase tracking-[0.24em] opacity-70">
           {plan.frequency === "UNLIMITED" ? "Acesso livre" : `${plan.frequency} por semana`}
         </p>
-        <p className="mt-2 text-5xl font-bold leading-none">
+        <p className="mt-2 text-4xl font-bold leading-none sm:text-5xl">
           R$ {plan.priceMonthly.toFixed(2).replace(".", ",")}
         </p>
         <p className="mt-2 text-sm opacity-70">

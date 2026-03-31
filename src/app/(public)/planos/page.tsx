@@ -37,12 +37,12 @@ export default function PlanosPage() {
       <div className="mt-12 space-y-12">
         {sections.map((section) => (
           <section key={section.key}>
-            <div className="mb-6 flex items-end justify-between gap-4">
+            <div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-brand-gray-light">
                   {section.title}
                 </p>
-                <h2 className="mt-2 text-4xl font-bold uppercase text-white">
+                <h2 className="mt-2 text-3xl font-bold uppercase text-white sm:text-4xl">
                   {section.title}
                 </h2>
               </div>
@@ -61,7 +61,7 @@ export default function PlanosPage() {
         <p className="text-xs uppercase tracking-[0.3em] text-black/55">
           Proximo passo
         </p>
-        <h2 className="mt-4 text-5xl font-bold uppercase leading-none">
+        <h2 className="mt-4 text-4xl font-bold uppercase leading-none sm:text-5xl">
           Escolha o plano e entre no sistema
         </h2>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-black/70 sm:text-base">
@@ -69,10 +69,10 @@ export default function PlanosPage() {
           treinos atribuidos e comunicacoes da academia no proprio painel.
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Button asChild size="lg">
+          <Button asChild size="lg" className="w-full sm:w-auto">
             <Link href="/cadastro">Criar conta</Link>
           </Button>
-          <Button asChild size="lg" variant="secondary">
+          <Button asChild size="lg" variant="secondary" className="w-full sm:w-auto">
             <a href={BRAND.contact.whatsappUrl} target="_blank" rel="noopener noreferrer">
               Tirar duvidas no WhatsApp
             </a>
