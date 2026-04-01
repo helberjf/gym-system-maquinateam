@@ -3,10 +3,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { PublicPlanCard } from "@/components/public/PublicPlanCard";
 import { SectionHeading } from "@/components/public/SectionHeading";
+import type { PublicPlanCatalogItem } from "@/lib/billing/public";
 import { BRAND } from "@/lib/constants/brand";
-import { groupPlansByPeriod } from "@/lib/constants/plans";
-
-const featuredPlans = groupPlansByPeriod().monthly.slice(0, 3);
 
 const stats = [
   { label: "Modalidades", value: String(BRAND.modalities.length) },
@@ -15,7 +13,15 @@ const stats = [
   { label: "Foco", value: "Performance" },
 ];
 
-export function HomeLandingPage() {
+type HomeLandingPageProps = {
+  featuredPlans: PublicPlanCatalogItem[];
+  isAuthenticated: boolean;
+};
+
+export function HomeLandingPage({
+  featuredPlans,
+  isAuthenticated,
+}: HomeLandingPageProps) {
   return (
     <div className="bg-brand-black">
       <section className="relative overflow-hidden border-b border-brand-gray-mid">
@@ -188,11 +194,25 @@ export function HomeLandingPage() {
           </Button>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-5 xl:grid-cols-3">
-          {featuredPlans.map((plan) => (
-            <PublicPlanCard key={plan.id} plan={plan} />
-          ))}
-        </div>
+        {featuredPlans.length === 0 ? (
+          <div className="mt-10 rounded-[2rem] border border-brand-gray-mid bg-brand-gray-dark p-6">
+            <p className="text-sm text-brand-gray-light">
+              Os planos publicos estao sendo sincronizados. Enquanto isso, a equipe
+              comercial segue atendendo rapido pelo WhatsApp.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-10 grid grid-cols-1 gap-5 xl:grid-cols-3">
+            {featuredPlans.map((plan) => (
+              <PublicPlanCard
+                key={plan.id}
+                plan={plan}
+                isAuthenticated={isAuthenticated}
+                callbackUrl="/planos"
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="border-y border-brand-gray-mid bg-brand-gray-dark/60">

@@ -40,6 +40,11 @@ enum PaymentMethod {
   BOLETO
 }
 
+enum PaymentProvider {
+  MERCADO_PAGO
+  ABACATEPAY
+}
+
 enum SubscriptionStatus {
   PENDING
   ACTIVE
@@ -105,6 +110,11 @@ enum InventoryMovementType {
   MANUAL_ADJUSTMENT
 }
 
+enum CheckoutPaymentKind {
+  STORE_ORDER
+  PLAN_SUBSCRIPTION
+}
+
 model User {
   id                    String               @id @default(cuid())
   name                  String
@@ -138,6 +148,7 @@ model User {
   couponRedemptions     CouponRedemption[]
   inventoryMovements    InventoryMovement[]  @relation("InventoryMovementPerformedBy")
   orderStatusHistory    OrderStatusHistory[] @relation("OrderStatusChangedBy")
+  checkoutPayments      CheckoutPayment[]
 
   @@index([role, isActive])
   @@map("users")
@@ -350,6 +361,7 @@ model Plan {
   active                Boolean        @default(true)
   modality              Modality?      @relation(fields: [modalityId], references: [id], onDelete: SetNull)
   subscriptions         Subscription[]
+  checkoutPayments      CheckoutPayment[]
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
 
@@ -375,6 +387,7 @@ model Subscription {
   studentProfile   StudentProfile     @relation(fields: [studentProfileId], references: [id], onDelete: Restrict)
   plan             Plan               @relation(fields: [planId], references: [id], onDelete: Restrict)
   payments         Payment[]
+  checkoutPayment  CheckoutPayment?
   createdByUser    User?              @relation("SubscriptionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
@@ -670,6 +683,7 @@ model Order {
   statusHistory          OrderStatusHistory[]
   inventoryMovements     InventoryMovement[]
   couponRedemption       CouponRedemption?
+  checkoutPayment        CheckoutPayment?
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
 
@@ -732,6 +746,55 @@ model InventoryMovement {
   @@index([orderId])
   @@index([type])
   @@map("inventory_movements")
+}
+
+model CheckoutPayment {
+  id                   String              @id @default(cuid())
+  kind                 CheckoutPaymentKind
+  provider             PaymentProvider     @default(MERCADO_PAGO)
+  status               PaymentStatus       @default(PENDING)
+  method               PaymentMethod?
+  externalReference    String              @unique
+  amountCents          Int
+  providerPreferenceId String?             @unique
+  providerPaymentId    String?             @unique
+  checkoutUrl          String?             @db.Text
+  rawPayload           Json?
+  failureReason        String?             @db.Text
+  paidAt               DateTime?
+  refundedAt           DateTime?
+  userId               String
+  orderId              String?             @unique
+  subscriptionId       String?             @unique
+  planId               String?
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order                Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  subscription         Subscription?       @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  plan                 Plan?               @relation(fields: [planId], references: [id], onDelete: SetNull)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@index([userId, kind, status])
+  @@index([status, createdAt])
+  @@index([planId])
+  @@map("checkout_payments")
+}
+
+model WebhookEvent {
+  id               String          @id @default(cuid())
+  provider         PaymentProvider @default(MERCADO_PAGO)
+  providerKey      String          @unique
+  providerObjectId String?
+  eventType        String?
+  payload          Json?
+  processed        Boolean         @default(false)
+  processedAt      DateTime?
+  error            String?         @db.Text
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([provider, processed, createdAt])
+  @@map("webhook_events")
 }
 
 model TrainingTemplate {

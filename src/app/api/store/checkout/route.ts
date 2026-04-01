@@ -1,5 +1,5 @@
 import { requireApiPermission } from "@/lib/permissions";
-import { createOrderFromActiveCart } from "@/lib/store/orders";
+import { createStoreCheckoutSession } from "@/lib/store/orders";
 import { handleRouteError, successResponse } from "@/lib/errors";
 import {
   attachRateLimitHeaders,
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     });
     rateLimitHeaders = rateLimit.headers;
 
-    const order = await createOrderFromActiveCart(input, {
+    const checkout = await createStoreCheckoutSession(input, {
       userId: session.user.id,
       request,
     });
@@ -31,10 +31,11 @@ export async function POST(request: Request) {
     return attachRateLimitHeaders(
       successResponse(
         {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          totalCents: order.totalCents,
-          message: "Pedido criado com sucesso.",
+          orderId: checkout.orderId,
+          orderNumber: checkout.orderNumber,
+          totalCents: checkout.totalCents,
+          redirectUrl: checkout.redirectUrl,
+          message: "Checkout online iniciado com sucesso.",
         },
         { status: 201 },
       ),

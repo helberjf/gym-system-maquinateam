@@ -261,3 +261,15 @@ export const updatePaymentSchema = paymentBaseSchema
       });
     }
   });
+
+export const selfServicePlanCheckoutSchema = z.object({
+  paymentMethod: z
+    .enum([
+      PaymentMethod.PIX,
+      PaymentMethod.CREDIT_CARD,
+      PaymentMethod.DEBIT_CARD,
+      PaymentMethod.BANK_TRANSFER,
+      PaymentMethod.BOLETO,
+    ])
+    .default(PaymentMethod.PIX),
+});

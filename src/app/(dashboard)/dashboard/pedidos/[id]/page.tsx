@@ -42,9 +42,17 @@ export default async function MyOrderDetailPage({
         title={order.orderNumber}
         description={`Criado em ${formatDate(order.placedAt)} com ${order.items.length} item(ns).`}
         action={
-          <Button asChild variant="secondary">
-            <Link href="/dashboard/pedidos">Voltar para meus pedidos</Link>
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            {order.checkoutPayment?.status === "PENDING" &&
+            order.checkoutPayment.checkoutUrl ? (
+              <Button asChild>
+                <a href={order.checkoutPayment.checkoutUrl}>Pagar agora</a>
+              </Button>
+            ) : null}
+            <Button asChild variant="secondary">
+              <Link href="/dashboard/pedidos">Voltar para meus pedidos</Link>
+            </Button>
+          </div>
         }
       />
 

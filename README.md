@@ -29,6 +29,8 @@ O produto agora entrega:
 - bcryptjs
 - Mailgun
 - Upstash Redis
+- Mercado Pago
+- AbacatePay
 - Cloudflare R2
 - Zod
 - Tailwind CSS
@@ -52,7 +54,13 @@ Publico:
 - `GET /loja/[slug]`
 - `GET /carrinho`
 - `GET /checkout`
+- `GET /checkout/sucesso`
+- `GET /checkout/falha`
+- `GET /checkout/pix`
 - `GET /planos`
+- `GET /planos/sucesso`
+- `GET /planos/falha`
+- `GET /planos/pix`
 - `GET /contato`
 - `GET /faq`
 - `GET /login`
@@ -101,6 +109,9 @@ APIs importantes:
 - `POST /api/store/coupon`
 - `POST /api/store/shipping/quote`
 - `POST /api/store/checkout`
+- `POST /api/plans/[id]/checkout`
+- `GET /api/payments/pix/status`
+- `POST /api/mercadopago/webhook`
 - `POST /api/store/coupons`
 - `PATCH /api/store/orders/[id]/status`
 - `GET /api/reports/export`
@@ -180,6 +191,7 @@ Cada modulo concentra regras, filtros, consultas e mutacoes sem jogar tudo dentr
 - CRUD de planos
 - CRUD de assinaturas
 - pagamentos e mensalidades
+- pagamento online inicial de planos com Mercado Pago e Pix via AbacatePay
 - inadimplencia
 - resumo financeiro do aluno
 
@@ -199,10 +211,11 @@ Cada modulo concentra regras, filtros, consultas e mutacoes sem jogar tudo dentr
 - pagina de detalhe de produto
 - carrinho server-side para visitante e usuario autenticado
 - merge de carrinho no login
-- checkout com endereco, frete e cupom
+- checkout com endereco, frete, cupom e redirecionamento ao gateway correto
+- Pix com AbacatePay para produtos e planos, incluindo tela de QR Code e polling de status
 - frete interno com retirada, entrega local e envio padrao
 - CRUD administrativo de cupons
-- pedidos com snapshot de itens, status e pagamento
+- pedidos com snapshot de itens, status, reconciliacao de pagamento e webhook
 - historico de pedidos para o cliente
 - operacao administrativa de pedidos e atualizacao de status
 - movimentos de estoque e restauracao no cancelamento
@@ -314,6 +327,16 @@ Variaveis principais:
 - `MAILGUN_API_BASE_URL`
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
+- `MP_ACCESS_TOKEN`
+- `MP_PUBLIC_KEY`
+- `MP_INTEGRATOR_ID`
+- `MP_MAX_INSTALLMENTS`
+- `MP_WEBHOOK_SECRET`
+- `MP_WEBHOOK_ALLOWED_IPS`
+- `MP_STORE_STATEMENT_DESCRIPTOR`
+- `MP_PLAN_STATEMENT_DESCRIPTOR`
+- `ABACATEPAY_API_KEY`
+- `ABACATEPAY_BASE_URL`
 - `R2_ACCOUNT_ID`
 - `R2_ENDPOINT`
 - `R2_ACCESS_KEY_ID`

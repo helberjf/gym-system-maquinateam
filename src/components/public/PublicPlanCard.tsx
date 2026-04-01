@@ -1,12 +1,27 @@
-import type { Plan } from "@/types";
-import { PLAN_PERIOD_LABELS } from "@/lib/constants/plans";
-import { BRAND } from "@/lib/constants/brand";
+import { PlanCheckoutButton } from "@/components/public/PlanCheckoutButton";
+import {
+  formatCurrencyFromCents,
+  formatMonthsLabel,
+  getBillingIntervalLabel,
+} from "@/lib/billing/constants";
+import type { PublicPlanCatalogItem } from "@/lib/billing/public";
 
 type PublicPlanCardProps = {
-  plan: Plan;
+  plan: PublicPlanCatalogItem;
+  isAuthenticated: boolean;
+  callbackUrl?: string;
 };
 
-export function PublicPlanCard({ plan }: PublicPlanCardProps) {
+export function PublicPlanCard({
+  plan,
+  isAuthenticated,
+  callbackUrl,
+}: PublicPlanCardProps) {
+  const recurringLabel = getBillingIntervalLabel(plan.billingIntervalMonths);
+  const durationLabel = formatMonthsLabel(
+    plan.durationMonths ?? plan.billingIntervalMonths,
+  );
+
   return (
     <article
       className={[
@@ -24,7 +39,7 @@ export function PublicPlanCard({ plan }: PublicPlanCardProps) {
               plan.featured ? "text-black/60" : "text-brand-gray-light",
             ].join(" ")}
           >
-            {PLAN_PERIOD_LABELS[plan.period]}
+            {plan.periodLabel}
           </p>
           <h3 className="mt-3 text-2xl font-bold uppercase sm:text-3xl">{plan.name}</h3>
         </div>
@@ -48,18 +63,33 @@ export function PublicPlanCard({ plan }: PublicPlanCardProps) {
           plan.featured ? "text-black/70" : "text-brand-gray-light",
         ].join(" ")}
       >
-        {plan.description}
+        {plan.description ?? "Plano ativo para acompanhar treinos, pagamentos e evolucao no sistema da academia."}
       </p>
 
       <div className="mt-6">
         <p className="text-xs uppercase tracking-[0.24em] opacity-70">
-          {plan.frequency === "UNLIMITED" ? "Acesso livre" : `${plan.frequency} por semana`}
+          {plan.isUnlimited
+            ? "Acesso livre"
+            : plan.sessionsPerWeek
+              ? `${plan.sessionsPerWeek} treino(s) por semana`
+              : recurringLabel}
         </p>
         <p className="mt-2 text-4xl font-bold leading-none sm:text-5xl">
-          R$ {plan.priceMonthly.toFixed(2).replace(".", ",")}
+          {formatCurrencyFromCents(plan.monthlyEquivalentCents)}
         </p>
         <p className="mt-2 text-sm opacity-70">
-          {plan.period === "FULL" ? "valor mensal de referencia" : "por mes"}
+          {plan.billingIntervalMonths > 1
+            ? `equivale a ${formatCurrencyFromCents(plan.monthlyEquivalentCents)} por mes`
+            : "por mes"}
+        </p>
+        <p className="mt-2 text-xs uppercase tracking-[0.18em] opacity-70">
+          {recurringLabel} • duracao {durationLabel}
+        </p>
+        <p className="mt-3 text-sm opacity-70">
+          Cobranca do periodo: {formatCurrencyFromCents(plan.priceCents)}
+          {plan.enrollmentFeeCents > 0
+            ? ` + matricula ${formatCurrencyFromCents(plan.enrollmentFeeCents)}`
+            : ""}
         </p>
       </div>
 
@@ -78,19 +108,15 @@ export function PublicPlanCard({ plan }: PublicPlanCardProps) {
       </ul>
 
       <div className="mt-8">
-        <a
-          href={BRAND.contact.whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+        <PlanCheckoutButton
+          planId={plan.id}
+          isAuthenticated={isAuthenticated}
+          callbackUrl={callbackUrl}
           className={[
-            "flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold",
-            plan.featured
-              ? "bg-black text-white"
-              : "border border-brand-gray-mid text-white hover:bg-brand-gray-mid",
+            "w-full",
+            plan.featured ? "bg-black text-white hover:bg-black/90" : "",
           ].join(" ")}
-        >
-          Falar com a equipe
-        </a>
+        />
       </div>
     </article>
   );

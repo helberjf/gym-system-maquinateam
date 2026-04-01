@@ -952,6 +952,12 @@ export async function getSubscriptionsIndexData(
           durationMonths: true,
         },
       },
+      checkoutPayment: {
+        select: {
+          checkoutUrl: true,
+          status: true,
+        },
+      },
       payments: {
         where: {
           status: PaymentStatus.PENDING,
@@ -1055,6 +1061,12 @@ export async function getSubscriptionDetailData(
           billingIntervalMonths: true,
           durationMonths: true,
           active: true,
+        },
+      },
+      checkoutPayment: {
+        select: {
+          checkoutUrl: true,
+          status: true,
         },
       },
       payments: {

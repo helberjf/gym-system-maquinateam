@@ -48,9 +48,18 @@ export default async function SubscriptionDetailPage({
         title={subscription.studentProfile.user.name}
         description={`${subscription.plan.name} com vigencia iniciada em ${formatDate(subscription.startDate)}.`}
         action={
-          <Button asChild variant="secondary">
-            <Link href="/dashboard/assinaturas">Voltar para assinaturas</Link>
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            {session.user.role === "ALUNO" &&
+            subscription.checkoutPayment?.status === "PENDING" &&
+            subscription.checkoutPayment.checkoutUrl ? (
+              <Button asChild>
+                <a href={subscription.checkoutPayment.checkoutUrl}>Pagar agora</a>
+              </Button>
+            ) : null}
+            <Button asChild variant="secondary">
+              <Link href="/dashboard/assinaturas">Voltar para assinaturas</Link>
+            </Button>
+          </div>
         }
       />
 

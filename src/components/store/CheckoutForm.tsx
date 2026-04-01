@@ -1,7 +1,6 @@
 "use client";
 
 import { startTransition, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { DeliveryMethod, PaymentMethod } from "@prisma/client";
 import { toast } from "sonner";
 import { formatCurrencyFromCents } from "@/lib/billing/constants";
@@ -68,7 +67,6 @@ export function CheckoutForm({
   suggestedAddress,
   cartSubtotalCents,
 }: CheckoutFormProps) {
-  const router = useRouter();
   const initialAddress = useMemo(
     () => getInitialAddress(addresses, suggestedAddress),
     [addresses, suggestedAddress],
@@ -201,18 +199,21 @@ export function CheckoutForm({
             error?: string;
             orderId?: string;
             orderNumber?: string;
+            redirectUrl?: string;
           }
         | null;
 
-      if (!response.ok || !payload?.ok || !payload.orderId) {
+      if (!response.ok || !payload?.ok || !payload.orderId || !payload.redirectUrl) {
         toast.error(payload?.error ?? "Nao foi possivel concluir o pedido.");
         setSubmitting(false);
         return;
       }
 
-      toast.success(`Pedido ${payload.orderNumber ?? ""} criado com sucesso.`.trim());
+      toast.success(
+        `Pedido ${payload.orderNumber ?? ""} iniciado. Redirecionando para o pagamento...`.trim(),
+      );
       startTransition(() => {
-        router.push(`/dashboard/pedidos/${payload.orderId}`);
+        window.location.assign(payload.redirectUrl!);
       });
     } catch {
       toast.error("Nao foi possivel concluir o pedido.");
@@ -398,7 +399,7 @@ export function CheckoutForm({
         <div>
           <h2 className="text-lg font-bold text-white">Pagamento e desconto</h2>
           <p className="mt-1 text-sm text-brand-gray-light">
-            Selecione a forma de pagamento e aplique um cupom valido, se tiver.
+            PIX abre o QR Code pela AbacatePay. Cartao, debito e boleto seguem pelo Mercado Pago.
           </p>
         </div>
 
@@ -461,7 +462,7 @@ export function CheckoutForm({
         </div>
 
         <Button type="submit" size="lg" loading={submitting} className="mt-6 w-full">
-          Finalizar pedido
+          Ir para pagamento
         </Button>
       </section>
     </form>

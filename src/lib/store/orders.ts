@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import {
+  CheckoutPaymentKind,
   DeliveryMethod,
   InventoryMovementType,
   OrderStatus,
@@ -19,6 +20,18 @@ import {
 } from "@/lib/errors";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { getAppUrl } from "@/lib/app-url";
+import {
+  buildMercadoPagoReturnUrls,
+  createMercadoPagoPreference,
+  getMercadoPagoWebhookUrl,
+  onlyDigits,
+} from "@/lib/payments/mercadopago";
+import {
+  createAbacatePayPixQrCode,
+  formatAbacatePayCellphone,
+} from "@/lib/payments/abacatepay";
+import { resolvePaymentProvider } from "@/lib/payments/provider";
 import { getCartSnapshot } from "@/lib/store/cart";
 import { validateCouponForItems } from "@/lib/store/coupons";
 import {
@@ -74,6 +87,166 @@ function buildOrderNumber(referenceDate = new Date()) {
   const randomSuffix = Math.floor(Math.random() * 9000 + 1000);
 
   return `PED-${year}${month}${day}-${randomSuffix}`;
+}
+
+function buildCheckoutExternalReference(prefix: "STORE" | "PLAN") {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const randomSuffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+
+  return `${prefix}-${timestamp}-${randomSuffix}`;
+}
+
+function buildMercadoPagoOrderItems(
+  orderItems: Array<{
+    name: string;
+    quantity: number;
+    unitPriceCents: number;
+  }>,
+  discountCents: number,
+) {
+  const units: Array<{ title: string; priceCents: number }> = [];
+
+  for (const item of orderItems) {
+    for (let index = 0; index < item.quantity; index += 1) {
+      units.push({
+        title: item.name,
+        priceCents: item.unitPriceCents,
+      });
+    }
+  }
+
+  const totalBeforeDiscount = units.reduce(
+    (total, unit) => total + unit.priceCents,
+    0,
+  );
+
+  if (units.length === 0 || totalBeforeDiscount <= 0) {
+    return [];
+  }
+
+  const boundedDiscount = Math.max(
+    0,
+    Math.min(discountCents, totalBeforeDiscount),
+  );
+
+  let allocatedDiscount = 0;
+  const adjustedUnits = units.map((unit, index) => {
+    const isLast = index === units.length - 1;
+    const proportionalDiscount = isLast
+      ? boundedDiscount - allocatedDiscount
+      : Math.floor((boundedDiscount * unit.priceCents) / totalBeforeDiscount);
+
+    allocatedDiscount += proportionalDiscount;
+
+    return {
+      title: unit.title,
+      adjustedPriceCents: Math.max(0, unit.priceCents - proportionalDiscount),
+    };
+  });
+
+  const grouped = new Map<
+    string,
+    { title: string; quantity: number; unitPriceCents: number }
+  >();
+
+  for (const unit of adjustedUnits) {
+    const key = `${unit.title}:${unit.adjustedPriceCents}`;
+    const existing = grouped.get(key);
+
+    if (existing) {
+      existing.quantity += 1;
+      continue;
+    }
+
+    grouped.set(key, {
+      title: unit.title,
+      quantity: 1,
+      unitPriceCents: unit.adjustedPriceCents,
+    });
+  }
+
+  return Array.from(grouped.values()).map((item) => ({
+    title: item.title,
+    quantity: item.quantity,
+    unit_price: Number((item.unitPriceCents / 100).toFixed(2)),
+    currency_id: "BRL" as const,
+  }));
+}
+
+function buildMercadoPagoPayer(input: {
+  customerName: string;
+  customerEmail: string;
+  customerDocument?: string | null;
+  shippingZipCode?: string | null;
+  shippingStreet?: string | null;
+  shippingNumber?: string | null;
+}) {
+  const [firstName, ...remainingName] = input.customerName.trim().split(/\s+/);
+  const document = onlyDigits(input.customerDocument);
+  const zipCode = onlyDigits(input.shippingZipCode);
+  const streetNumberDigits = onlyDigits(input.shippingNumber);
+  const streetNumber = Number(streetNumberDigits);
+
+  return {
+    name: firstName || input.customerName,
+    surname: remainingName.join(" ") || undefined,
+    email: input.customerEmail,
+    identification:
+      document.length >= 11
+        ? {
+            type: "CPF" as const,
+            number: document,
+          }
+        : undefined,
+    address:
+      zipCode && input.shippingStreet && Number.isFinite(streetNumber)
+        ? {
+            zip_code: zipCode,
+            street_name: input.shippingStreet,
+            street_number: streetNumber,
+          }
+        : undefined,
+  };
+}
+
+function buildStorePixDescription(
+  orderItems: Array<{ name: string; quantity: number }>,
+) {
+  const firstItem = orderItems[0];
+
+  if (!firstItem) {
+    return "Pedido online";
+  }
+
+  const totalUnits = orderItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0,
+  );
+  const remainingUnits = Math.max(0, totalUnits - firstItem.quantity);
+  const suffix = remainingUnits > 0 ? ` + ${remainingUnits} item(ns)` : "";
+
+  return `Pedido ${firstItem.name}${suffix}`.slice(0, 140);
+}
+
+function buildStorePixCustomer(input: {
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string | null;
+  customerDocument?: string | null;
+}) {
+  const document = onlyDigits(input.customerDocument);
+  const phone = onlyDigits(input.customerPhone);
+
+  if (!document || !phone) {
+    return undefined;
+  }
+
+  return {
+    name: input.customerName.trim(),
+    cellphone: formatAbacatePayCellphone(phone),
+    email: input.customerEmail.trim(),
+    taxId: document,
+  };
 }
 
 function isLocalDeliveryAddress(address: ShippingAddressInput) {
@@ -529,26 +702,143 @@ export async function getShippingQuoteForActiveCart(input: {
   });
 }
 
-export async function createOrderFromActiveCart(
+async function rollbackFailedStoreCheckout(input: {
+  orderId: string;
+  checkoutPaymentId: string;
+  userId: string;
+  failureReason: string;
+}) {
+  await prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: {
+        id: input.orderId,
+      },
+      include: {
+        items: true,
+        couponRedemption: true,
+      },
+    });
+
+    if (!order) {
+      return;
+    }
+
+    for (const item of order.items) {
+      const product = await tx.product.findUnique({
+        where: {
+          id: item.productId,
+        },
+        select: {
+          stockQuantity: true,
+          status: true,
+        },
+      });
+
+      await tx.product.update({
+        where: {
+          id: item.productId,
+        },
+        data: {
+          stockQuantity: {
+            increment: item.quantity,
+          },
+          status:
+            product && product.status === ProductStatus.OUT_OF_STOCK
+              ? ProductStatus.ACTIVE
+              : undefined,
+        },
+      });
+
+      await tx.inventoryMovement.create({
+        data: {
+          productId: item.productId,
+          orderId: order.id,
+          type: InventoryMovementType.ORDER_RESTORE,
+          quantityDelta: item.quantity,
+          reason: "Estoque devolvido apos falha ao iniciar o pagamento online",
+          note: input.failureReason,
+          performedByUserId: input.userId,
+        },
+      });
+    }
+
+    if (order.couponId && order.couponRedemption) {
+      await tx.coupon.update({
+        where: {
+          id: order.couponId,
+        },
+        data: {
+          usageCount: {
+            decrement: 1,
+          },
+        },
+      });
+
+      await tx.couponRedemption.delete({
+        where: {
+          id: order.couponRedemption.id,
+        },
+      });
+    }
+
+    await tx.checkoutPayment.update({
+      where: {
+        id: input.checkoutPaymentId,
+      },
+      data: {
+        status: PaymentStatus.FAILED,
+        failureReason: input.failureReason,
+      },
+    });
+
+    await tx.order.update({
+      where: {
+        id: order.id,
+      },
+      data: {
+        status: OrderStatus.CANCELLED,
+        paymentStatus: PaymentStatus.FAILED,
+        cancelledAt: new Date(),
+        inventoryRestoredAt: new Date(),
+        statusHistory: {
+          create: {
+            status: OrderStatus.CANCELLED,
+            note: "Pedido cancelado porque o checkout online nao conseguiu ser iniciado.",
+            changedByUserId: input.userId,
+          },
+        },
+      },
+    });
+  });
+}
+
+export async function createStoreCheckoutSession(
   input: CheckoutInput,
   context: MutationContext,
 ) {
   const user = await getAuthenticatedStoreUser();
   await getCartSnapshot();
+  const paymentProvider = resolvePaymentProvider(input.paymentMethod);
 
   if (user.id !== context.userId) {
     throw new ForbiddenError("A conta autenticada nao corresponde ao checkout.");
   }
 
   const resolvedAddress = await resolveCheckoutAddress(user.id, input);
+  const origin = context.request ? new URL(context.request.url).origin : undefined;
+  const baseUrl = getAppUrl(origin);
+  const returnUrls = buildMercadoPagoReturnUrls({
+    successPath: "/checkout/sucesso",
+    failurePath: "/checkout/falha",
+    origin,
+  });
 
-  return prisma.$transaction(async (tx) => {
+  const created = await prisma.$transaction(async (tx) => {
     const { cartId, items } = await getPreparedCartItemsForUserCart(tx, user.id);
     const subtotalCents = items.reduce(
       (total, item) => total + item.priceCents * item.quantity,
       0,
     );
-
     const shippingOptions = calculateShippingOptions({
       items,
       address: resolvedAddress as ShippingAddressInput | null,
@@ -586,13 +876,12 @@ export async function createOrderFromActiveCart(
       0,
       subtotalCents - discountCents + selectedShipping.priceCents,
     );
-
     const order = await tx.order.create({
       data: {
         orderNumber,
         userId: user.id,
         couponId: couponValidation?.ok ? couponValidation.coupon.id : null,
-        status: OrderStatus.CONFIRMED,
+        status: OrderStatus.PENDING,
         paymentStatus: PaymentStatus.PENDING,
         paymentMethod: input.paymentMethod as PaymentMethod,
         deliveryMethod: selectedShipping.method,
@@ -610,7 +899,9 @@ export async function createOrderFromActiveCart(
         shippingAddressLabel:
           input.deliveryMethod === DeliveryMethod.PICKUP
             ? "Retirada na academia"
-            : normalizeOptionalString((resolvedAddress as ShippingAddressInput | null)?.label),
+            : normalizeOptionalString(
+                (resolvedAddress as ShippingAddressInput | null)?.label,
+              ),
         shippingRecipientName:
           input.deliveryMethod === DeliveryMethod.PICKUP
             ? user.name
@@ -646,11 +937,15 @@ export async function createOrderFromActiveCart(
         shippingComplement:
           input.deliveryMethod === DeliveryMethod.PICKUP
             ? null
-            : normalizeOptionalString((resolvedAddress as ShippingAddressInput | null)?.complement),
+            : normalizeOptionalString(
+                (resolvedAddress as ShippingAddressInput | null)?.complement,
+              ),
         shippingReference:
           input.deliveryMethod === DeliveryMethod.PICKUP
             ? BRAND.hours.label
-            : normalizeOptionalString((resolvedAddress as ShippingAddressInput | null)?.reference),
+            : normalizeOptionalString(
+                (resolvedAddress as ShippingAddressInput | null)?.reference,
+              ),
         items: {
           create: items.map((item) => ({
             productId: item.productId,
@@ -666,8 +961,8 @@ export async function createOrderFromActiveCart(
         },
         statusHistory: {
           create: {
-            status: OrderStatus.CONFIRMED,
-            note: "Pedido criado via checkout da loja.",
+            status: OrderStatus.PENDING,
+            note: "Pedido criado e aguardando pagamento online.",
             changedByUserId: user.id,
           },
         },
@@ -676,6 +971,12 @@ export async function createOrderFromActiveCart(
         id: true,
         orderNumber: true,
         totalCents: true,
+        customerName: true,
+        customerEmail: true,
+        customerDocument: true,
+        shippingZipCode: true,
+        shippingStreet: true,
+        shippingNumber: true,
       },
     });
 
@@ -726,45 +1027,197 @@ export async function createOrderFromActiveCart(
           orderId: order.id,
           type: InventoryMovementType.ORDER_RESERVE,
           quantityDelta: item.quantity * -1,
-          reason: "Reserva automatica de estoque no checkout",
+          reason: "Reserva automatica de estoque no checkout online",
           performedByUserId: user.id,
         },
       });
     }
 
-    await tx.cartItem.deleteMany({
-      where: {
-        cartId,
+    const checkoutPayment = await tx.checkoutPayment.create({
+      data: {
+        kind: CheckoutPaymentKind.STORE_ORDER,
+        provider: paymentProvider,
+        userId: user.id,
+        orderId: order.id,
+        amountCents: totalCents,
+        status: PaymentStatus.PENDING,
+        method: input.paymentMethod,
+        externalReference: buildCheckoutExternalReference("STORE"),
+      },
+      select: {
+        id: true,
+        externalReference: true,
       },
     });
 
-    if (
-      resolvedAddress &&
-      input.saveAddress &&
-      !input.shippingAddressId &&
-      input.deliveryMethod !== DeliveryMethod.PICKUP
-    ) {
-      await saveAddressForUser(user.id, resolvedAddress as ShippingAddressInput);
+    return {
+      cartId,
+      items,
+      subtotalCents,
+      discountCents,
+      selectedShipping,
+      couponCode: couponValidation?.ok ? couponValidation.coupon.code : null,
+      resolvedAddress,
+      order,
+      checkoutPayment,
+    };
+  });
+
+  try {
+    let redirectUrl = "";
+    let providerPreferenceId: string | null = null;
+    let providerPaymentId: string | null = null;
+    let rawPayload: Prisma.InputJsonValue = {};
+
+    if (paymentProvider === "ABACATEPAY") {
+      const pixData = await createAbacatePayPixQrCode({
+        amountCents: created.order.totalCents,
+        description: buildStorePixDescription(
+          created.items.map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+          })),
+        ),
+        customer: buildStorePixCustomer({
+          customerName: created.order.customerName,
+          customerEmail: created.order.customerEmail,
+          customerPhone: user.phone,
+          customerDocument: created.order.customerDocument,
+        }),
+        metadata: {
+          checkoutPaymentId: created.checkoutPayment.id,
+          orderId: created.order.id,
+          orderNumber: created.order.orderNumber,
+          externalReference: created.checkoutPayment.externalReference,
+        },
+      });
+
+      if (!pixData.id) {
+        throw new ConflictError(
+          "A AbacatePay nao retornou um identificador de Pix valido.",
+        );
+      }
+
+      providerPaymentId = pixData.id;
+      redirectUrl = `${baseUrl}/checkout/pix?payment=${created.checkoutPayment.id}`;
+      rawPayload = pixData as Prisma.InputJsonValue;
+    } else {
+      const mpItems = buildMercadoPagoOrderItems(
+        created.items.map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+          unitPriceCents: item.priceCents,
+        })),
+        created.discountCents,
+      );
+
+      if (created.selectedShipping.priceCents > 0) {
+        mpItems.push({
+          title: created.selectedShipping.label,
+          quantity: 1,
+          unit_price: Number((created.selectedShipping.priceCents / 100).toFixed(2)),
+          currency_id: "BRL",
+        });
+      }
+
+      const preference = await createMercadoPagoPreference({
+        items: mpItems,
+        externalReference: created.checkoutPayment.externalReference,
+        notificationUrl: getMercadoPagoWebhookUrl(origin),
+        successUrl: `${returnUrls.successUrl}?orderId=${created.order.id}`,
+        pendingUrl: `${returnUrls.pendingUrl}?orderId=${created.order.id}`,
+        failureUrl: `${returnUrls.failureUrl}?orderId=${created.order.id}`,
+        statementDescriptor:
+          process.env.MP_STORE_STATEMENT_DESCRIPTOR ?? "MAQUINATEAM",
+        payer: buildMercadoPagoPayer({
+          customerName: created.order.customerName,
+          customerEmail: created.order.customerEmail,
+          customerDocument: created.order.customerDocument,
+          shippingZipCode: created.order.shippingZipCode,
+          shippingStreet: created.order.shippingStreet,
+          shippingNumber: created.order.shippingNumber,
+        }),
+        metadata: {
+          checkoutPaymentId: created.checkoutPayment.id,
+          orderId: created.order.id,
+          orderNumber: created.order.orderNumber,
+          appUrl: baseUrl,
+        },
+      });
+
+      providerPreferenceId = preference.preferenceId;
+      redirectUrl = preference.checkoutUrl;
+      rawPayload = preference.rawPayload;
     }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.checkoutPayment.update({
+        where: {
+          id: created.checkoutPayment.id,
+        },
+        data: {
+          providerPreferenceId,
+          providerPaymentId,
+          checkoutUrl: redirectUrl,
+          rawPayload,
+        },
+      });
+
+      await tx.cartItem.deleteMany({
+        where: {
+          cartId: created.cartId,
+        },
+      });
+
+      if (
+        created.resolvedAddress &&
+        input.saveAddress &&
+        !input.shippingAddressId &&
+        input.deliveryMethod !== DeliveryMethod.PICKUP
+      ) {
+        await saveAddressForUser(
+          user.id,
+          created.resolvedAddress as ShippingAddressInput,
+        );
+      }
+    });
 
     await logAuditEvent({
       request: context.request,
       actorId: user.id,
-      action: "STORE_ORDER_CREATED",
+      action: "STORE_ORDER_CHECKOUT_CREATED",
       entityType: "Order",
-      entityId: order.id,
-      summary: `Pedido ${order.orderNumber} criado na loja.`,
+      entityId: created.order.id,
+      summary: `Checkout online iniciado para o pedido ${created.order.orderNumber}.`,
       afterData: {
-        orderNumber: order.orderNumber,
-        totalCents: order.totalCents,
+        orderNumber: created.order.orderNumber,
+        totalCents: created.order.totalCents,
         deliveryMethod: input.deliveryMethod,
         paymentMethod: input.paymentMethod,
-        couponCode: couponValidation?.ok ? couponValidation.coupon.code : null,
+        provider: paymentProvider,
+        couponCode: created.couponCode,
       },
     });
 
-    return order;
-  });
+    return {
+      orderId: created.order.id,
+      orderNumber: created.order.orderNumber,
+      totalCents: created.order.totalCents,
+      redirectUrl,
+    };
+  } catch (error) {
+    await rollbackFailedStoreCheckout({
+      orderId: created.order.id,
+      checkoutPaymentId: created.checkoutPayment.id,
+      userId: user.id,
+      failureReason:
+        error instanceof Error
+          ? error.message
+          : "Falha ao criar checkout no gateway de pagamento.",
+    });
+
+    throw error;
+  }
 }
 
 export async function getMyOrdersData(userId: string, filters?: OrderFilters) {
@@ -883,6 +1336,12 @@ export async function getOrderDetailForUser(input: {
       paidAt: true,
       deliveredAt: true,
       cancelledAt: true,
+      checkoutPayment: {
+        select: {
+          checkoutUrl: true,
+          status: true,
+        },
+      },
       coupon: {
         select: {
           code: true,

@@ -186,9 +186,18 @@ export default async function SubscriptionsPage({
                     </p>
                   </div>
 
-                  <Button asChild variant="secondary">
-                    <Link href={`/dashboard/assinaturas/${subscription.id}`}>Ver detalhes</Link>
-                  </Button>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    {session.user.role === "ALUNO" &&
+                    subscription.checkoutPayment?.status === "PENDING" &&
+                    subscription.checkoutPayment.checkoutUrl ? (
+                      <Button asChild>
+                        <a href={subscription.checkoutPayment.checkoutUrl}>Pagar agora</a>
+                      </Button>
+                    ) : null}
+                    <Button asChild variant="secondary">
+                      <Link href={`/dashboard/assinaturas/${subscription.id}`}>Ver detalhes</Link>
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
