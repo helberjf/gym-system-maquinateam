@@ -5,6 +5,7 @@ import { SectionHeading } from "@/components/public/SectionHeading";
 import { StoreProductCard } from "@/components/store/StoreProductCard";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { flattenSearchParams } from "@/lib/academy/presentation";
+import { BRAND } from "@/lib/constants/brand";
 import { getStoreCatalogData } from "@/lib/store/catalog";
 import { CATALOG_SORT_OPTIONS } from "@/lib/store/constants";
 import { parseSearchParams } from "@/lib/validators";
@@ -30,7 +31,23 @@ export default async function StorePage({
     flattenSearchParams(rawSearchParams),
     catalogFiltersSchema,
   );
-  const data = await getStoreCatalogData(filters);
+
+  let storeUnavailable = false;
+  const emptyCatalogData = {
+    products: [],
+    categories: [],
+    summary: {
+      totalProducts: 0,
+      featuredProducts: 0,
+      inStockProducts: 0,
+    },
+  };
+
+  const data = await getStoreCatalogData(filters).catch((error) => {
+    storeUnavailable = true;
+    console.error("Falha ao carregar o catalogo publico da loja.", error);
+    return emptyCatalogData;
+  });
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
@@ -72,22 +89,44 @@ export default async function StorePage({
 
           <div className="rounded-[2rem] border border-brand-gray-mid bg-brand-black/50 p-5">
             <p className="text-xs uppercase tracking-[0.28em] text-brand-gray-light">
-              Compra integrada
+              {storeUnavailable ? "Atendimento rapido" : "Compra integrada"}
             </p>
             <p className="mt-4 text-2xl font-bold uppercase text-white">
-              Carrinho server-side, cupom, frete e pedidos
+              {storeUnavailable
+                ? "Catálogo em reconexao"
+                : "Carrinho server-side, cupom, frete e pedidos"}
             </p>
             <p className="mt-4 text-sm leading-7 text-brand-gray-light">
-              Monte o carrinho como visitante e finalize logado, com area do aluno,
-              controle de estoque e pedidos conectados ao sistema interno.
+              {storeUnavailable
+                ? "A vitrine publica esta sendo restabelecida neste ambiente. Enquanto isso, voce ainda pode falar com a equipe para reservar equipamentos e acessorios."
+                : "Monte o carrinho como visitante e finalize logado, com area do aluno, controle de estoque e pedidos conectados ao sistema interno."}
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button asChild className="w-full sm:w-auto">
-                <Link href="/carrinho">Abrir carrinho</Link>
-              </Button>
-              <Button asChild variant="secondary" className="w-full sm:w-auto">
-                <Link href="/dashboard/pedidos">Meus pedidos</Link>
-              </Button>
+              {storeUnavailable ? (
+                <>
+                  <Button asChild className="w-full sm:w-auto">
+                    <a
+                      href={BRAND.contact.whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Falar no WhatsApp
+                    </a>
+                  </Button>
+                  <Button asChild variant="secondary" className="w-full sm:w-auto">
+                    <Link href="/">Voltar ao inicio</Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button asChild className="w-full sm:w-auto">
+                    <Link href="/carrinho">Abrir carrinho</Link>
+                  </Button>
+                  <Button asChild variant="secondary" className="w-full sm:w-auto">
+                    <Link href="/dashboard/pedidos">Meus pedidos</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -100,11 +139,13 @@ export default async function StorePage({
             defaultValue={filters.q ?? ""}
             placeholder="Busque por nome, categoria ou descricao"
             className="rounded-xl border border-brand-gray-mid bg-brand-black px-4 py-3 text-sm text-white outline-none transition focus:border-brand-red"
+            disabled={storeUnavailable}
           />
           <select
             name="category"
             defaultValue={filters.category ?? ""}
             className="rounded-xl border border-brand-gray-mid bg-brand-black px-4 py-3 text-sm text-white outline-none transition focus:border-brand-red"
+            disabled={storeUnavailable}
           >
             <option value="">Todas as categorias</option>
             {data.categories.map((category) => (
@@ -121,6 +162,7 @@ export default async function StorePage({
             defaultValue={filters.priceMin ?? ""}
             placeholder="Preco min."
             className="rounded-xl border border-brand-gray-mid bg-brand-black px-4 py-3 text-sm text-white outline-none transition focus:border-brand-red"
+            disabled={storeUnavailable}
           />
           <input
             name="priceMax"
@@ -130,11 +172,13 @@ export default async function StorePage({
             defaultValue={filters.priceMax ?? ""}
             placeholder="Preco max."
             className="rounded-xl border border-brand-gray-mid bg-brand-black px-4 py-3 text-sm text-white outline-none transition focus:border-brand-red"
+            disabled={storeUnavailable}
           />
           <select
             name="availability"
             defaultValue={filters.availability}
             className="rounded-xl border border-brand-gray-mid bg-brand-black px-4 py-3 text-sm text-white outline-none transition focus:border-brand-red"
+            disabled={storeUnavailable}
           >
             <option value="all">Toda disponibilidade</option>
             <option value="in_stock">Somente em estoque</option>
@@ -144,6 +188,7 @@ export default async function StorePage({
             name="sort"
             defaultValue={filters.sort}
             className="rounded-xl border border-brand-gray-mid bg-brand-black px-4 py-3 text-sm text-white outline-none transition focus:border-brand-red"
+            disabled={storeUnavailable}
           >
             {CATALOG_SORT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -152,7 +197,12 @@ export default async function StorePage({
             ))}
           </select>
           <div className="flex items-center gap-3">
-            <Button type="submit" variant="secondary" className="w-full">
+            <Button
+              type="submit"
+              variant="secondary"
+              className="w-full"
+              disabled={storeUnavailable}
+            >
               Filtrar
             </Button>
             <Button asChild variant="ghost" className="w-full">
@@ -169,7 +219,16 @@ export default async function StorePage({
           description="Visual premium, checkout consistente e produtos escolhidos para a rotina de luta."
         />
 
-        {data.products.length === 0 ? (
+        {storeUnavailable ? (
+          <div className="mt-10">
+            <EmptyState
+              title="Catalogo temporariamente indisponivel"
+              description="A pagina da loja continua no ar, mas o catalogo ainda nao conseguiu carregar neste ambiente. Assim que a conexao estabilizar, os produtos voltam a aparecer aqui."
+              actionLabel="Voltar ao inicio"
+              actionHref="/"
+            />
+          </div>
+        ) : data.products.length === 0 ? (
           <div className="mt-10">
             <EmptyState
               title="Nenhum produto encontrado"
