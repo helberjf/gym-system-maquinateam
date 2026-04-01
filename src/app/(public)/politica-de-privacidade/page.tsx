@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { BRAND } from "@/lib/constants/brand";
+import { buildPublicMetadata } from "@/lib/seo";
 
 const collectedData = [
   "nome completo",
@@ -77,11 +77,18 @@ const rights = [
   "solicitar a eliminacao de dados tratados com base em consentimento, observadas as hipoteses legais de retencao",
 ] as const;
 
-export const metadata: Metadata = {
+export const metadata = buildPublicMetadata({
   title: "Politica de Privacidade",
   description:
-    "Politica de Privacidade da Maquina Team sobre tratamento de dados pessoais, cookies e direitos dos usuarios.",
-};
+    "Entenda como a Maquina Team trata dados pessoais, cookies e direitos dos usuarios em seus servicos digitais e presenciais.",
+  path: "/politica-de-privacidade",
+  keywords: [
+    "politica de privacidade",
+    "lgpd academia",
+    "dados pessoais academia",
+  ],
+  type: "article",
+});
 
 function PolicyCard({
   title,

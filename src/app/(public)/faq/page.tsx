@@ -1,13 +1,21 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/public/SectionHeading";
 import { BRAND } from "@/lib/constants/brand";
+import { absoluteUrl, buildPublicMetadata, serializeJsonLd } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = buildPublicMetadata({
   title: "FAQ",
-  description: "Perguntas frequentes sobre treinos, matricula, planos e rotina da academia.",
-};
+  description:
+    "Perguntas frequentes sobre treinos, matricula, planos, horarios e rotina da Maquina Team.",
+  path: "/faq",
+  keywords: [
+    "perguntas frequentes academia",
+    "faq academia de luta",
+    "horarios de treino",
+    "matricula academia",
+  ],
+});
 
 const faqCategories = [
   {
@@ -70,66 +78,90 @@ const faqCategories = [
 ];
 
 export default function FaqPage() {
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqCategories.flatMap((category) =>
+      category.items.map((item) => ({
+        "@type": "Question",
+        name: item.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: item.answer,
+        },
+      })),
+    ),
+    url: absoluteUrl("/faq"),
+  };
+
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      <SectionHeading
-        eyebrow="FAQ"
-        title="Perguntas frequentes"
-        description="As respostas abaixo cobrem as duvidas mais comuns sobre matricula, planos, rotina e funcionamento da academia."
-        align="center"
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(faqSchema),
+        }}
       />
+      <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <SectionHeading
+          eyebrow="FAQ"
+          title="Perguntas frequentes"
+          description="As respostas abaixo cobrem as duvidas mais comuns sobre matricula, planos, rotina e funcionamento da academia."
+          align="center"
+        />
 
-      <div className="mx-auto mt-12 max-w-4xl space-y-8">
-        {faqCategories.map((category) => (
-          <section
-            key={category.title}
-            className="rounded-[2rem] border border-brand-gray-mid bg-brand-gray-dark p-6"
-          >
-            <h2 className="text-3xl font-bold uppercase text-white">
-              {category.title}
-            </h2>
-            <div className="mt-6 space-y-4">
-              {category.items.map((item) => (
-                <details
-                  key={item.question}
-                  className="group rounded-[1.5rem] border border-brand-gray-mid bg-brand-black/50 p-5"
-                >
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold uppercase text-white">
-                    <span>{item.question}</span>
-                    <span className="text-brand-gray-light transition group-open:rotate-45">
-                      +
-                    </span>
-                  </summary>
-                  <p className="pt-4 text-sm leading-7 text-brand-gray-light">
-                    {item.answer}
-                  </p>
-                </details>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
-
-      <section className="mt-12 rounded-[2rem] border border-brand-gray-mid bg-white px-6 py-8 text-black sm:px-8">
-        <p className="text-xs uppercase tracking-[0.3em] text-black/55">
-          Ainda com duvida?
-        </p>
-        <h2 className="mt-3 text-4xl font-bold uppercase">Fale com a equipe</h2>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-black/70">
-          Se quiser ajuda para escolher plano, confirmar horarios ou entender a
-          experiencia da academia, a equipe responde rapido pelo WhatsApp.
-        </p>
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <Button asChild>
-            <a href={BRAND.contact.whatsappUrl} target="_blank" rel="noopener noreferrer">
-              Abrir WhatsApp
-            </a>
-          </Button>
-          <Button asChild variant="secondary">
-            <Link href="/contato">Ir para contato</Link>
-          </Button>
+        <div className="mx-auto mt-12 max-w-4xl space-y-8">
+          {faqCategories.map((category) => (
+            <section
+              key={category.title}
+              className="rounded-[2rem] border border-brand-gray-mid bg-brand-gray-dark p-6"
+            >
+              <h2 className="text-3xl font-bold uppercase text-white">
+                {category.title}
+              </h2>
+              <div className="mt-6 space-y-4">
+                {category.items.map((item) => (
+                  <details
+                    key={item.question}
+                    className="group rounded-[1.5rem] border border-brand-gray-mid bg-brand-black/50 p-5"
+                  >
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold uppercase text-white">
+                      <span>{item.question}</span>
+                      <span className="text-brand-gray-light transition group-open:rotate-45">
+                        +
+                      </span>
+                    </summary>
+                    <p className="pt-4 text-sm leading-7 text-brand-gray-light">
+                      {item.answer}
+                    </p>
+                  </details>
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
-      </section>
-    </div>
+
+        <section className="mt-12 rounded-[2rem] border border-brand-gray-mid bg-white px-6 py-8 text-black sm:px-8">
+          <p className="text-xs uppercase tracking-[0.3em] text-black/55">
+            Ainda com duvida?
+          </p>
+          <h2 className="mt-3 text-4xl font-bold uppercase">Fale com a equipe</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-black/70">
+            Se quiser ajuda para escolher plano, confirmar horarios ou entender a
+            experiencia da academia, a equipe responde rapido pelo WhatsApp.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Button asChild>
+              <a href={BRAND.contact.whatsappUrl} target="_blank" rel="noopener noreferrer">
+                Abrir WhatsApp
+              </a>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/contato">Ir para contato</Link>
+            </Button>
+          </div>
+        </section>
+      </div>
+    </>
   );
 }

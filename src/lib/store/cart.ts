@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { ProductStatus, Prisma } from "@prisma/client";
-import { auth } from "@/auth";
+import { getOptionalSession } from "@/lib/auth/session";
 import { isLowStockProduct } from "@/lib/commerce/constants";
 import { ConflictError, NotFoundError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
@@ -174,7 +174,7 @@ async function mergeGuestCartIntoUserCart(db: CartClient, input: {
 }
 
 async function getOrCreateActiveCart(options?: { createIfMissing?: boolean }) {
-  const session = await auth().catch(() => null);
+  const session = await getOptionalSession();
   const userId = session?.user?.id ?? null;
 
   if (userId) {
@@ -241,7 +241,7 @@ async function getOrCreateActiveCart(options?: { createIfMissing?: boolean }) {
 }
 
 export async function getCartSnapshot() {
-  const session = await auth().catch(() => null);
+  const session = await getOptionalSession();
   const cart = await getOrCreateActiveCart();
 
   if (!cart) {

@@ -1,5 +1,5 @@
-import { auth } from "@/auth";
 import { ProductStatus } from "@prisma/client";
+import { getOptionalSession } from "@/lib/auth/session";
 import { NotFoundError, UnauthorizedError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import {
@@ -8,7 +8,7 @@ import {
 } from "@/lib/store/catalog";
 
 async function requireWishlistUserId() {
-  const session = await auth();
+  const session = await getOptionalSession();
   const userId = session?.user?.id;
 
   if (!userId) {
@@ -52,7 +52,7 @@ async function ensureWishlistProduct(productId: string) {
 }
 
 export async function getStoreFavoriteProductIds() {
-  const session = await auth();
+  const session = await getOptionalSession();
 
   if (!session?.user?.id) {
     return [];
@@ -75,7 +75,7 @@ export async function getStoreFavoriteProductIds() {
 }
 
 export async function getStoreWishlistSummary() {
-  const session = await auth().catch(() => null);
+  const session = await getOptionalSession();
 
   if (!session?.user?.id) {
     return {

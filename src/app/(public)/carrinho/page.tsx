@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { EmptyState } from "@/components/dashboard/EmptyState";
@@ -7,12 +6,15 @@ import { ApplyCouponForm } from "@/components/store/ApplyCouponForm";
 import { CartItemControls } from "@/components/store/CartItemControls";
 import { Button } from "@/components/ui/Button";
 import { formatCurrencyFromCents } from "@/lib/billing/constants";
+import { buildNoIndexMetadata } from "@/lib/seo";
 import { getCartSnapshot } from "@/lib/store/cart";
 
-export const metadata: Metadata = {
+export const metadata = buildNoIndexMetadata({
   title: "Carrinho",
-  description: "Revise seus produtos, cupom e siga para o checkout da loja da academia.",
-};
+  description:
+    "Revise seus produtos, cupom e siga para o checkout da loja da Maquina Team.",
+  path: "/carrinho",
+});
 
 export default async function CartPage() {
   const session = await auth();

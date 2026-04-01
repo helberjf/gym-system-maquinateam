@@ -1,13 +1,14 @@
 import Link from "next/link";
-import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/Button";
 import { prisma } from "@/lib/prisma";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = buildNoIndexMetadata({
   title: "Pagamento em confirmacao",
-  description: "Retorno do checkout da loja da academia.",
-};
+  description: "Retorno do checkout da loja da Maquina Team.",
+  path: "/checkout/sucesso",
+});
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -64,4 +65,3 @@ export default async function StoreCheckoutSuccessPage({
     </div>
   );
 }
-

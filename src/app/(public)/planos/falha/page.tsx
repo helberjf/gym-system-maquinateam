@@ -1,13 +1,14 @@
 import Link from "next/link";
-import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/Button";
 import { prisma } from "@/lib/prisma";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = buildNoIndexMetadata({
   title: "Pagamento do plano nao concluido",
-  description: "Falha ou cancelamento no checkout de planos da academia.",
-};
+  description: "Falha ou cancelamento no checkout de planos da Maquina Team.",
+  path: "/planos/falha",
+});
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 

@@ -1,14 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Menu } from "lucide-react";
-import { auth } from "@/auth";
 import { BRAND } from "@/lib/constants/brand";
+import { getOptionalSession } from "@/lib/auth/session";
 import { Button } from "@/components/ui/Button";
 import { StoreCartLink } from "@/components/store/StoreCartLink";
 import { StoreWishlistLink } from "@/components/store/StoreWishlistLink";
 
 export async function Navbar() {
-  const session = await auth().catch(() => null);
+  const session = await getOptionalSession();
   const isAuthenticated = Boolean(session?.user?.id);
 
   const links = [

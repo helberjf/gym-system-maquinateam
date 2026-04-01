@@ -1,16 +1,18 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { CheckoutForm } from "@/components/store/CheckoutForm";
 import { formatCurrencyFromCents } from "@/lib/billing/constants";
 import { requirePermission } from "@/lib/auth/guards";
+import { buildNoIndexMetadata } from "@/lib/seo";
 import { getCheckoutPageData } from "@/lib/store/orders";
 
-export const metadata: Metadata = {
+export const metadata = buildNoIndexMetadata({
   title: "Checkout",
-  description: "Endereco, frete, cupom e criacao do pedido da loja da academia.",
-};
+  description:
+    "Endereco, frete, cupom e criacao do pedido da loja da Maquina Team.",
+  path: "/checkout",
+});
 
 export default async function CheckoutPage() {
   await requirePermission("viewStoreOrders", "/checkout");

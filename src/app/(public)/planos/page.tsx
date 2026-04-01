@@ -1,11 +1,10 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { BadgeCheck, Clock3, Flame, Sparkles } from "lucide-react";
-import { auth } from "@/auth";
 import { PlanCheckoutButton } from "@/components/public/PlanCheckoutButton";
 import { PublicPlanCard } from "@/components/public/PublicPlanCard";
 import { SectionHeading } from "@/components/public/SectionHeading";
 import { Button } from "@/components/ui/Button";
+import { getOptionalSession } from "@/lib/auth/session";
 import { formatCurrencyFromCents } from "@/lib/billing/constants";
 import {
   getPublicPlanSections,
@@ -13,12 +12,20 @@ import {
   type PublicPlanSection,
 } from "@/lib/billing/public";
 import { BRAND } from "@/lib/constants/brand";
+import { absoluteUrl, buildPublicMetadata, serializeJsonLd } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Planos",
+export const metadata = buildPublicMetadata({
+  title: "Planos de treino",
   description:
-    "Conheca os planos da Maquina Team e escolha o ritmo ideal para sua rotina.",
-};
+    "Conheca os planos da Maquina Team e escolha o ritmo ideal para sua rotina de treino em Juiz de Fora.",
+  path: "/planos",
+  keywords: [
+    "planos de academia",
+    "planos de luta",
+    "academia em juiz de fora",
+    "plano full",
+  ],
+});
 
 export const revalidate = 120;
 
@@ -232,7 +239,7 @@ function PlanPeriodSection({
 
 export default async function PlanosPage() {
   const [session, sections] = await Promise.all([
-    auth().catch(() => null),
+    getOptionalSession(),
     getPublicPlanSections(),
   ]);
   const isAuthenticated = Boolean(session?.user?.id);
@@ -257,62 +264,92 @@ export default async function PlanosPage() {
   const displaySections = fullSection
     ? [...remainingSections, fullSection]
     : remainingSections;
+  const plansSchema = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Planos Maquina Team",
+    url: absoluteUrl("/planos"),
+    description:
+      "Tabela publica de planos de treino da Maquina Team com opcoes mensais, semestrais, anuais e Full.",
+    hasPart: displaySections.map((section) => ({
+      "@type": "OfferCatalog",
+      name: section.title,
+      itemListElement: section.plans.map((plan, index) => ({
+        "@type": "Offer",
+        position: index + 1,
+        name: plan.name,
+        description: plan.description,
+        priceCurrency: "BRL",
+        price: (plan.priceCents / 100).toFixed(2),
+        availability: "https://schema.org/InStock",
+        url: absoluteUrl("/planos"),
+      })),
+    })),
+  };
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      <SectionHeading
-        eyebrow="Planos"
-        title="Escolha o seu ritmo"
-        description="Planos claros, diretos e com checkout online. Escolha a frequencia e o periodo que encaixam na sua rotina."
-        align="center"
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(plansSchema),
+        }}
       />
+      <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <SectionHeading
+          eyebrow="Planos"
+          title="Escolha o seu ritmo"
+          description="Planos claros, diretos e com checkout online. Escolha a frequencia e o periodo que encaixam na sua rotina."
+          align="center"
+        />
 
-      <RecommendedFullSection
-        plans={fullPlans}
-        isAuthenticated={isAuthenticated}
-      />
+        <RecommendedFullSection
+          plans={fullPlans}
+          isAuthenticated={isAuthenticated}
+        />
 
-      <div className="mt-14 space-y-14">
-        {displaySections.map((section) => (
-          <PlanPeriodSection
-            key={section.key}
-            section={section}
-            isAuthenticated={isAuthenticated}
-          />
-        ))}
-      </div>
-
-      <section className="mt-14 rounded-[2.5rem] border border-brand-gray-mid bg-white px-6 py-10 text-black sm:px-10">
-        <p className="text-xs uppercase tracking-[0.3em] text-black/55">
-          Proximo passo
-        </p>
-        <h2 className="mt-4 text-4xl font-bold uppercase leading-none sm:text-5xl">
-          Escolha o plano e entre no sistema
-        </h2>
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-black/70 sm:text-base">
-          Depois do cadastro, o aluno passa a acompanhar pagamentos, treinos
-          atribuidos e comunicacoes da academia no proprio painel.
-        </p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Button asChild size="lg" className="w-full sm:w-auto">
-            <Link href="/cadastro">Criar conta</Link>
-          </Button>
-          <Button
-            asChild
-            size="lg"
-            variant="secondary"
-            className="w-full border-black/15 text-black hover:bg-black/5 sm:w-auto"
-          >
-            <a
-              href={BRAND.contact.whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Tirar duvidas no WhatsApp
-            </a>
-          </Button>
+        <div className="mt-14 space-y-14">
+          {displaySections.map((section) => (
+            <PlanPeriodSection
+              key={section.key}
+              section={section}
+              isAuthenticated={isAuthenticated}
+            />
+          ))}
         </div>
-      </section>
-    </div>
+
+        <section className="mt-14 rounded-[2.5rem] border border-brand-gray-mid bg-white px-6 py-10 text-black sm:px-10">
+          <p className="text-xs uppercase tracking-[0.3em] text-black/55">
+            Proximo passo
+          </p>
+          <h2 className="mt-4 text-4xl font-bold uppercase leading-none sm:text-5xl">
+            Escolha o plano e entre no sistema
+          </h2>
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-black/70 sm:text-base">
+            Depois do cadastro, o aluno passa a acompanhar pagamentos, treinos
+            atribuidos e comunicacoes da academia no proprio painel.
+          </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Button asChild size="lg" className="w-full sm:w-auto">
+              <Link href="/cadastro">Criar conta</Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="secondary"
+              className="w-full border-black/15 text-black hover:bg-black/5 sm:w-auto"
+            >
+              <a
+                href={BRAND.contact.whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Tirar duvidas no WhatsApp
+              </a>
+            </Button>
+          </div>
+        </section>
+      </div>
+    </>
   );
 }

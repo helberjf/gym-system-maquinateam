@@ -1,15 +1,16 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { StoreProductCard } from "@/components/store/StoreProductCard";
 import { Button } from "@/components/ui/Button";
 import { requireAuthenticatedSession } from "@/lib/permissions";
+import { buildNoIndexMetadata } from "@/lib/seo";
 import { getStoreWishlistSnapshot } from "@/lib/store/favorites";
 
-export const metadata: Metadata = {
+export const metadata = buildNoIndexMetadata({
   title: "Favoritos",
   description: "Produtos salvos para acompanhar depois na loja da Maquina Team.",
-};
+  path: "/favoritos",
+});
 
 export default async function FavoritesPage() {
   await requireAuthenticatedSession("/favoritos");
