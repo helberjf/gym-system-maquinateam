@@ -174,7 +174,7 @@ async function mergeGuestCartIntoUserCart(db: CartClient, input: {
 }
 
 async function getOrCreateActiveCart(options?: { createIfMissing?: boolean }) {
-  const session = await auth();
+  const session = await auth().catch(() => null);
   const userId = session?.user?.id ?? null;
 
   if (userId) {
@@ -241,7 +241,7 @@ async function getOrCreateActiveCart(options?: { createIfMissing?: boolean }) {
 }
 
 export async function getCartSnapshot() {
-  const session = await auth();
+  const session = await auth().catch(() => null);
   const cart = await getOrCreateActiveCart();
 
   if (!cart) {

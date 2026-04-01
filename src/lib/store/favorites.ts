@@ -75,7 +75,7 @@ export async function getStoreFavoriteProductIds() {
 }
 
 export async function getStoreWishlistSummary() {
-  const session = await auth();
+  const session = await auth().catch(() => null);
 
   if (!session?.user?.id) {
     return {

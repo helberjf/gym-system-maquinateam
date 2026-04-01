@@ -1,5 +1,131 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Search } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/EmptyState";
+import { StoreProductCard } from "@/components/store/StoreProductCard";
+import { Button } from "@/components/ui/Button";
+import { flattenSearchParams } from "@/lib/academy/presentation";
+import { getStoreCatalogData } from "@/lib/store/catalog";
+import { CATALOG_SORT_OPTIONS } from "@/lib/store/constants";
+import { getStoreFavoriteProductIds } from "@/lib/store/favorites";
+import { parseSearchParams } from "@/lib/validators";
+import { catalogFiltersSchema } from "@/lib/validators/store";
 
-export default function ProductsRedirectPage() {
-  redirect("/loja");
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export const metadata: Metadata = {
+  title: "Produtos | Maquina Team",
+  description:
+    "Equipamentos, vestuario e acessorios para treino selecionados pela Maquina Team.",
+};
+
+export const revalidate = 120;
+
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const rawSearchParams = await searchParams;
+  const filters = parseSearchParams(
+    flattenSearchParams(rawSearchParams),
+    catalogFiltersSchema,
+  );
+
+  const [data, favoriteIds] = await Promise.all([
+    getStoreCatalogData(filters),
+    getStoreFavoriteProductIds(),
+  ]);
+  const favoriteIdSet = new Set(favoriteIds);
+  const fallbackMode = data.source === "fallback";
+
+  return (
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-14 lg:px-8">
+      {/* Header */}
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold text-white sm:text-4xl">Produtos</h1>
+        <p className="text-sm text-brand-gray-light">
+          {data.summary.totalProducts} produto(s) disponivel(is)
+        </p>
+      </div>
+
+      {/* Filters */}
+      <form className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative flex-1 sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+          <input
+            name="q"
+            defaultValue={filters.q ?? ""}
+            placeholder="Buscar produtos..."
+            className="w-full rounded-xl border border-brand-gray-mid bg-brand-gray-dark pl-10 pr-4 py-2.5 text-sm text-white outline-none transition placeholder:text-brand-gray-light focus:border-white"
+          />
+        </div>
+
+        <select
+          name="category"
+          defaultValue={filters.category ?? ""}
+          className="rounded-xl border border-brand-gray-mid bg-brand-gray-dark px-4 py-2.5 text-sm text-white outline-none transition focus:border-white"
+        >
+          <option value="">Todas as categorias</option>
+          {data.categories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+
+        <select
+          name="sort"
+          defaultValue={filters.sort}
+          className="rounded-xl border border-brand-gray-mid bg-brand-gray-dark px-4 py-2.5 text-sm text-white outline-none transition focus:border-white"
+        >
+          {CATALOG_SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+
+        <div className="flex gap-2">
+          <Button type="submit" variant="secondary" size="sm">
+            Filtrar
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/products">Limpar</Link>
+          </Button>
+        </div>
+      </form>
+
+      {fallbackMode ? (
+        <div className="mt-4 rounded-xl border border-amber-200/30 bg-amber-900/20 p-3">
+          <p className="text-xs text-amber-200">
+            Modo vitrine ativo — catalogo exibindo produtos de demonstracao.
+          </p>
+        </div>
+      ) : null}
+
+      {/* Product Grid */}
+      {data.products.length === 0 ? (
+        <div className="mt-8">
+          <EmptyState
+            title="Nenhum produto encontrado"
+            description="Ajuste os filtros para localizar outros itens."
+            actionLabel="Limpar filtros"
+            actionHref="/products"
+          />
+        </div>
+      ) : (
+        <section className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+          {data.products.map((product) => (
+            <StoreProductCard
+              key={product.id}
+              product={product}
+              initialIsFavorite={favoriteIdSet.has(product.id)}
+              interactiveEnabled={!fallbackMode}
+            />
+          ))}
+        </section>
+      )}
+    </div>
+  );
 }

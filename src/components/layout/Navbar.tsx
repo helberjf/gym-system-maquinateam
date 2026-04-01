@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Menu } from "lucide-react";
 import { auth } from "@/auth";
 import { BRAND } from "@/lib/constants/brand";
 import { Button } from "@/components/ui/Button";
@@ -7,12 +8,12 @@ import { StoreCartLink } from "@/components/store/StoreCartLink";
 import { StoreWishlistLink } from "@/components/store/StoreWishlistLink";
 
 export async function Navbar() {
-  const session = await auth();
+  const session = await auth().catch(() => null);
   const isAuthenticated = Boolean(session?.user?.id);
 
   const links = [
     { href: "/", label: "Home" },
-    { href: "/loja", label: "Produtos" },
+    { href: "/products", label: "Produtos" },
     { href: "/planos", label: "Planos" },
     { href: "/contato", label: "Contato" },
     { href: "/faq", label: "FAQ" },
@@ -71,42 +72,44 @@ export async function Navbar() {
           ) : null}
         </div>
 
-        <details className="group relative lg:hidden">
-          <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-xl border border-brand-gray-mid bg-brand-gray-dark text-white sm:h-11 sm:w-11">
-            <span className="text-lg">+</span>
-          </summary>
-          <div className="absolute right-0 mt-3 w-[min(18rem,calc(100vw-2rem))] rounded-3xl border border-brand-gray-mid bg-brand-black/95 p-4 shadow-2xl">
-            <div className="space-y-2">
-              {links.map((link) => (
+        <div className="flex items-center gap-2 lg:hidden">
+          <StoreWishlistLink mobile />
+          <StoreCartLink mobile />
+          <details className="group relative">
+            <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-xl border border-brand-gray-mid bg-brand-gray-dark text-white sm:h-11 sm:w-11">
+              <Menu className="h-5 w-5" />
+            </summary>
+            <div className="absolute right-0 mt-3 w-[min(18rem,calc(100vw-2rem))] rounded-3xl border border-brand-gray-mid bg-brand-black/95 p-4 shadow-2xl">
+              <div className="space-y-2">
+                {links.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="block rounded-2xl border border-transparent px-4 py-3 text-sm text-brand-gray-light hover:border-brand-gray-mid hover:bg-brand-gray-dark hover:text-white"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-3">
                 <Link
-                  key={link.href}
-                  href={link.href}
-                  className="block rounded-2xl border border-transparent px-4 py-3 text-sm text-brand-gray-light hover:border-brand-gray-mid hover:bg-brand-gray-dark hover:text-white"
+                  href={isAuthenticated ? "/dashboard" : "/login"}
+                  className="rounded-2xl border border-brand-gray-mid px-4 py-3 text-center text-sm font-semibold text-white"
                 >
-                  {link.label}
+                  {isAuthenticated ? "Abrir dashboard" : "Entrar"}
                 </Link>
-              ))}
-              <StoreWishlistLink mobile />
-              <StoreCartLink mobile />
+                {!isAuthenticated ? (
+                  <Link
+                    href="/cadastro"
+                    className="rounded-2xl bg-white px-4 py-3 text-center text-sm font-semibold text-black"
+                  >
+                    Criar conta
+                  </Link>
+                ) : null}
+              </div>
             </div>
-            <div className="mt-4 grid grid-cols-1 gap-3">
-              <Link
-                href={isAuthenticated ? "/dashboard" : "/login"}
-                className="rounded-2xl border border-brand-gray-mid px-4 py-3 text-center text-sm font-semibold text-white"
-              >
-                {isAuthenticated ? "Abrir dashboard" : "Entrar"}
-              </Link>
-              {!isAuthenticated ? (
-                <Link
-                  href="/cadastro"
-                  className="rounded-2xl bg-white px-4 py-3 text-center text-sm font-semibold text-black"
-                >
-                  Criar conta
-                </Link>
-              ) : null}
-            </div>
-          </div>
-        </details>
+          </details>
+        </div>
       </nav>
     </header>
   );

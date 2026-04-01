@@ -39,7 +39,7 @@ export function Footer() {
               <Link href="/" className="block hover:text-white">
                 Home
               </Link>
-              <Link href="/loja" className="block hover:text-white">
+              <Link href="/products" className="block hover:text-white">
                 Produtos
               </Link>
               <Link href="/planos" className="block hover:text-white">

@@ -1,6 +1,6 @@
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
-import { StickyPublicCta } from '@/components/public/StickyPublicCta';
+import { WhatsAppButton } from '@/components/public/WhatsAppButton';
 
 export default function PublicLayout({
   children,
@@ -12,7 +12,7 @@ export default function PublicLayout({
       <Navbar />
       <main className="flex-1 overflow-x-clip pt-16 sm:pt-18">{children}</main>
       <Footer />
-      <StickyPublicCta />
+      <WhatsAppButton />
     </div>
   );
 }

@@ -57,7 +57,7 @@ export default async function StoreCheckoutSuccessPage({
             </Link>
           </Button>
           <Button asChild variant="secondary" className="w-full sm:w-auto">
-            <Link href="/loja">Voltar para a loja</Link>
+            <Link href="/products">Voltar para a loja</Link>
           </Button>
         </div>
       </div>

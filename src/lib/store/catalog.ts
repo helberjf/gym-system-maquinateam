@@ -699,3 +699,5 @@ export async function getStoreProductDetail(slug: string) {
     source: "fallback" as const,
   };
 }
+
+export const getFeaturedProducts = getFeaturedStoreProducts;

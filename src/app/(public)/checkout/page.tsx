@@ -28,7 +28,7 @@ export default async function CheckoutPage() {
           title="Seu carrinho esta vazio"
           description="Adicione produtos na loja antes de abrir o checkout."
           actionLabel="Voltar para a loja"
-          actionHref="/loja"
+          actionHref="/products"
         />
       </div>
     );

@@ -25,7 +25,7 @@ export default async function CartPage() {
           title="Seu carrinho esta vazio"
           description="Explore a loja da academia e adicione os primeiros equipamentos ao pedido."
           actionLabel="Ir para a loja"
-          actionHref="/loja"
+          actionHref="/products"
         />
       </div>
     );
@@ -136,7 +136,7 @@ export default async function CartPage() {
                 </Link>
               </Button>
               <Button asChild variant="secondary" size="lg" className="w-full">
-                <Link href="/loja">Continuar comprando</Link>
+                <Link href="/products">Continuar comprando</Link>
               </Button>
             </div>
           </section>

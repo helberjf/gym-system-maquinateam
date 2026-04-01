@@ -10,19 +10,37 @@ export async function StoreWishlistLink({
   mobile = false,
 }: StoreWishlistLinkProps) {
   const wishlist = await getStoreWishlistSummary();
-  const countLabel = wishlist.count > 0 ? ` (${wishlist.count})` : "";
+  const count = wishlist.count;
+
+  if (mobile) {
+    return (
+      <Link
+        href="/favoritos"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-brand-gray-mid bg-brand-gray-dark text-brand-gray-light transition hover:text-white"
+        aria-label={`Favoritos${count > 0 ? ` (${count})` : ""}`}
+      >
+        <Heart className="h-5 w-5" />
+        {count > 0 ? (
+          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+            {count > 99 ? "99+" : count}
+          </span>
+        ) : null}
+      </Link>
+    );
+  }
 
   return (
     <Link
       href="/favoritos"
-      className={
-        mobile
-          ? "flex items-center gap-2 rounded-2xl border border-transparent px-4 py-3 text-sm text-brand-gray-light hover:border-brand-gray-mid hover:bg-brand-gray-dark hover:text-white"
-          : "inline-flex items-center gap-1.5 text-sm font-medium text-brand-gray-light hover:text-white"
-      }
+      className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-brand-gray-light transition hover:text-white"
+      aria-label={`Favoritos${count > 0 ? ` (${count})` : ""}`}
     >
-      <Heart className="h-4 w-4" />
-      <span>Favoritos{countLabel}</span>
+      <Heart className="h-5 w-5" />
+      {count > 0 ? (
+        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+          {count > 99 ? "99+" : count}
+        </span>
+      ) : null}
     </Link>
   );
 }

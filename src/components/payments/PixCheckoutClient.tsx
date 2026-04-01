@@ -108,7 +108,7 @@ export function PixCheckoutClient({ context }: PixCheckoutClientProps) {
     [data?.qrCodeImage],
   );
 
-  const backHref = context === "plan" ? "/planos" : "/loja";
+  const backHref = context === "plan" ? "/planos" : "/products";
 
   const fetchStatus = useCallback(
     async (mode: "initial" | "manual" | "poll" = "poll") => {

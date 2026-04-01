@@ -34,7 +34,7 @@ export default async function FavoritesPage() {
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button asChild variant="secondary" className="border-neutral-300 text-neutral-900 hover:bg-neutral-100">
-              <Link href="/loja">Continuar vendo produtos</Link>
+              <Link href="/products">Continuar vendo produtos</Link>
             </Button>
             <Button asChild>
               <Link href="/carrinho">Abrir carrinho</Link>
@@ -49,7 +49,7 @@ export default async function FavoritesPage() {
             title="Nenhum favorito salvo"
             description="Use o coracao nos produtos da loja para montar sua selecao favorita."
             actionLabel="Explorar catalogo"
-            actionHref="/loja"
+            actionHref="/products"
           />
         </div>
       ) : (

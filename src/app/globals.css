@@ -95,3 +95,19 @@
     background-color: #585858;
   }
 }
+
+@keyframes boxing-punch {
+  0%,
+  100% {
+    transform: rotate(0deg) translateX(0);
+  }
+  30% {
+    transform: rotate(-12deg) translateX(-6px);
+  }
+  50% {
+    transform: rotate(6deg) translateX(8px) scale(1.08);
+  }
+  70% {
+    transform: rotate(-3deg) translateX(2px);
+  }
+}

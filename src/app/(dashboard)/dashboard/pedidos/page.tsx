@@ -47,7 +47,7 @@ export default async function MyOrdersPage({
         description="Acompanhe suas compras, status de entrega e historico de pedidos feitos na loja da academia."
         action={
           <Button asChild variant="secondary">
-            <Link href="/loja">Voltar para a loja</Link>
+            <Link href="/products">Voltar para a loja</Link>
           </Button>
         }
       />
@@ -90,7 +90,7 @@ export default async function MyOrdersPage({
           title="Nenhum pedido encontrado"
           description="Suas compras da loja aparecerao aqui assim que voce concluir o checkout."
           actionLabel="Ir para a loja"
-          actionHref="/loja"
+          actionHref="/products"
         />
       ) : (
         <section className="space-y-4">

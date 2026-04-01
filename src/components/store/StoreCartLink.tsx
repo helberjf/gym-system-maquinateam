@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ShoppingCart } from "lucide-react";
 import { getCartSnapshot } from "@/lib/store/cart";
 
 type StoreCartLinkProps = {
@@ -7,17 +8,37 @@ type StoreCartLinkProps = {
 
 export async function StoreCartLink({ mobile = false }: StoreCartLinkProps) {
   const cart = await getCartSnapshot();
+  const count = cart.summary.itemCount;
+
+  if (mobile) {
+    return (
+      <Link
+        href="/carrinho"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-brand-gray-mid bg-brand-gray-dark text-brand-gray-light transition hover:text-white"
+        aria-label={`Carrinho${count > 0 ? ` (${count} itens)` : ""}`}
+      >
+        <ShoppingCart className="h-5 w-5" />
+        {count > 0 ? (
+          <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-black">
+            {count > 99 ? "99+" : count}
+          </span>
+        ) : null}
+      </Link>
+    );
+  }
 
   return (
     <Link
       href="/carrinho"
-      className={
-        mobile
-          ? "block rounded-2xl border border-transparent px-4 py-3 text-sm text-brand-gray-light hover:border-brand-gray-mid hover:bg-brand-gray-dark hover:text-white"
-          : "text-sm font-medium text-brand-gray-light hover:text-white"
-      }
+      className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-brand-gray-light transition hover:text-white"
+      aria-label={`Carrinho${count > 0 ? ` (${count} itens)` : ""}`}
     >
-      Carrinho {cart.summary.itemCount > 0 ? `(${cart.summary.itemCount})` : ""}
+      <ShoppingCart className="h-5 w-5" />
+      {count > 0 ? (
+        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-black">
+          {count > 99 ? "99+" : count}
+        </span>
+      ) : null}
     </Link>
   );
 }
