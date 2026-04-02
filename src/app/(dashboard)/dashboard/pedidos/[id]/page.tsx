@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
@@ -155,9 +156,12 @@ export default async function MyOrderDetailPage({
             >
               <div className="overflow-hidden rounded-2xl border border-brand-gray-mid bg-brand-black">
                 {item.productImageUrl ? (
-                  <img
+                  <Image
                     src={item.productImageUrl}
                     alt={item.productName}
+                    width={88}
+                    height={80}
+                    unoptimized
                     className="aspect-[4/3] w-full object-cover md:h-20 md:w-[88px] md:aspect-auto"
                   />
                 ) : (

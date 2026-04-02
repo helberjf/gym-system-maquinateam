@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { MetricCard } from "@/components/dashboard/MetricCard";
@@ -154,9 +155,12 @@ export default async function ProductsPage({
                 <div className="flex flex-col gap-4 md:flex-row">
                   <div className="aspect-[4/3] w-full overflow-hidden rounded-2xl border border-brand-gray-mid bg-brand-black md:h-28 md:w-32 md:shrink-0 md:aspect-auto">
                     {product.images[0] ? (
-                      <img
+                      <Image
                         src={product.images[0].url}
                         alt={product.images[0].altText ?? product.name}
+                        width={128}
+                        height={112}
+                        unoptimized
                         className="h-full w-full object-cover"
                       />
                     ) : (

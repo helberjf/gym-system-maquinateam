@@ -108,7 +108,6 @@ function resolvePlanBadge(input: {
   isUnlimited: boolean;
   priceCents: number;
 }) {
-  const normalizedPlan = `${input.name} ${input.slug}`.toLowerCase();
   const fullVariant = resolveFullPlanVariant(input);
 
   if (fullVariant === "social") {

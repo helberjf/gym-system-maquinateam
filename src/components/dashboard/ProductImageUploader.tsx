@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { MAX_PRODUCT_IMAGES } from "@/lib/commerce/constants";
 import {
@@ -179,9 +180,12 @@ export function ProductImageUploader({
               className="grid grid-cols-1 gap-4 rounded-2xl border border-brand-gray-mid bg-brand-black/20 p-4 lg:grid-cols-[112px_minmax(0,1fr)_auto]"
             >
               <div className="overflow-hidden rounded-2xl border border-brand-gray-mid bg-brand-black">
-                <img
+                <Image
                   src={image.url}
                   alt={image.altText || "Preview da imagem do produto"}
+                  width={112}
+                  height={84}
+                  unoptimized
                   className="aspect-[4/3] w-full object-cover lg:h-28 lg:w-28 lg:aspect-auto"
                 />
               </div>

@@ -163,8 +163,14 @@ function getInputClassName(hasError: boolean) {
 
 function getFirstErrorMessage<TField extends string>(
   errors: Partial<Record<TField, string>>,
-) {
-  return Object.values(errors).find(Boolean) ?? null;
+): string | null {
+  for (const message of Object.values(errors)) {
+    if (typeof message === "string" && message.length > 0) {
+      return message;
+    }
+  }
+
+  return null;
 }
 
 function buildTouchedState<TField extends string>(fields: TField[]) {
@@ -612,8 +618,10 @@ export function CheckoutForm({
       toast.success(
         `Pedido ${payload.orderNumber ?? ""} iniciado. Redirecionando para o pagamento...`.trim(),
       );
+      const redirectUrl = payload.redirectUrl;
+
       startTransition(() => {
-        window.location.assign(payload.redirectUrl);
+        window.location.assign(redirectUrl);
       });
     } catch {
       toast.error("Nao foi possivel concluir o pedido.");

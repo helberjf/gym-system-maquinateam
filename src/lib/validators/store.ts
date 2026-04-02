@@ -30,12 +30,6 @@ const emailSchema = z
   .toLowerCase()
   .email("Informe um e-mail valido.");
 
-const phoneSchema = z
-  .string()
-  .trim()
-  .min(8, "Informe um telefone valido.")
-  .max(30, "Informe um telefone valido.");
-
 const brazilPhoneSchema = z
   .string()
   .trim()

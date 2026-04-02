@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
@@ -57,9 +58,12 @@ export default async function CartPage() {
                 <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-3 sm:grid-cols-[88px_minmax(0,1fr)] lg:grid-cols-[88px_minmax(0,1fr)_auto] lg:items-center">
                   <div className="overflow-hidden rounded-xl border border-brand-gray-mid bg-brand-black">
                     {item.product.image ? (
-                      <img
+                      <Image
                         src={item.product.image.url}
                         alt={item.product.image.altText ?? item.product.name}
+                        width={88}
+                        height={88}
+                        unoptimized
                         className="h-[76px] w-[76px] object-cover grayscale sm:h-[88px] sm:w-[88px]"
                       />
                     ) : (

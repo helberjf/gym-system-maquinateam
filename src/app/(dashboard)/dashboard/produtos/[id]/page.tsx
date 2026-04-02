@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { ApiActionButton } from "@/components/dashboard/ApiActionButton";
 import { PageHeader } from "@/components/dashboard/PageHeader";
@@ -84,9 +85,12 @@ export default async function ProductDetailPage({
             <div className="space-y-4">
               <div className="overflow-hidden rounded-3xl border border-brand-gray-mid bg-brand-black">
                 {product.images[0] ? (
-                  <img
+                  <Image
                     src={product.images[0].url}
                     alt={product.images[0].altText ?? product.name}
+                    width={1200}
+                    height={900}
+                    unoptimized
                     className="aspect-[4/3] w-full object-cover sm:h-80 sm:aspect-auto"
                   />
                 ) : (
@@ -103,9 +107,12 @@ export default async function ProductDetailPage({
                       key={image.id}
                       className="overflow-hidden rounded-2xl border border-brand-gray-mid bg-brand-black"
                     >
-                      <img
+                      <Image
                         src={image.url}
                         alt={image.altText ?? product.name}
+                        width={320}
+                        height={224}
+                        unoptimized
                         className="aspect-[4/3] w-full object-cover md:h-28 md:aspect-auto"
                       />
                     </div>

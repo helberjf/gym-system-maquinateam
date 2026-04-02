@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { StoreCatalogImage } from "@/lib/store/catalog";
 
@@ -42,9 +43,12 @@ export function StoreProductGallery({
   return (
     <div className="space-y-3">
       <div className="relative overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-sm">
-        <img
+        <Image
           src={currentImage.url}
           alt={currentImage.altText ?? productName}
+          width={960}
+          height={960}
+          unoptimized
           className="aspect-square w-full object-cover"
         />
 
@@ -82,9 +86,12 @@ export function StoreProductGallery({
                 index === selectedIndex ? "border-black" : "border-neutral-200",
               ].join(" ")}
             >
-              <img
+              <Image
                 src={image.url}
                 alt={image.altText ?? `${productName} ${index + 1}`}
+                width={240}
+                height={240}
+                unoptimized
                 className="aspect-square w-full object-cover"
               />
             </button>
