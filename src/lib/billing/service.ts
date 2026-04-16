@@ -25,6 +25,7 @@ import { getModalityVisibilityWhere, type ViewerContext } from "@/lib/academy/ac
 import { slugify, startOfDay } from "@/lib/academy/constants";
 import { ConflictError, NotFoundError } from "@/lib/errors";
 import { hasPermission } from "@/lib/permissions";
+import { buildOffsetPagination } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import {
   createPaymentSchema,
@@ -509,9 +510,30 @@ export async function getPlansIndexData(
     ],
   };
 
+  const [totalPlans, activePlans, planPriceStats, options] = await Promise.all([
+    prisma.plan.count({ where }),
+    prisma.plan.count({
+      where: {
+        AND: [where, { active: true }],
+      },
+    }),
+    prisma.plan.aggregate({
+      where,
+      _avg: {
+        priceCents: true,
+      },
+    }),
+    getPlanOptions(viewer),
+  ]);
+  const pagination = buildOffsetPagination({
+    page: filters.page,
+    totalItems: totalPlans,
+  });
   const plans = await prisma.plan.findMany({
     where,
     orderBy: [{ active: "desc" }, { name: "asc" }],
+    skip: pagination.skip,
+    take: pagination.limit,
     select: {
       id: true,
       name: true,
@@ -540,21 +562,17 @@ export async function getPlansIndexData(
   });
 
   const summary = {
-    totalPlans: plans.length,
-    activePlans: plans.filter((plan) => plan.active).length,
-    inactivePlans: plans.filter((plan) => !plan.active).length,
-    averagePriceCents:
-      plans.length > 0
-        ? Math.round(
-            plans.reduce((total, plan) => total + plan.priceCents, 0) / plans.length,
-          )
-        : 0,
+    totalPlans,
+    activePlans,
+    inactivePlans: Math.max(0, totalPlans - activePlans),
+    averagePriceCents: Math.round(planPriceStats._avg.priceCents ?? 0),
   };
 
   return {
     plans,
+    pagination,
     summary,
-    options: await getPlanOptions(viewer),
+    options,
     canManage: hasPermission(viewer.role, "managePlans"),
   };
 }
@@ -914,9 +932,28 @@ export async function getSubscriptionsIndexData(
     ],
   };
 
+  const [totalSubscriptions, summaryRows, options] = await Promise.all([
+    prisma.subscription.count({ where }),
+    prisma.subscription.findMany({
+      where,
+      select: {
+        status: true,
+        autoRenew: true,
+        priceCents: true,
+        discountCents: true,
+      },
+    }),
+    getSubscriptionOptions(viewer),
+  ]);
+  const pagination = buildOffsetPagination({
+    page: filters.page,
+    totalItems: totalSubscriptions,
+  });
   const subscriptions = await prisma.subscription.findMany({
     where,
     orderBy: [{ createdAt: "desc" }],
+    skip: pagination.skip,
+    take: pagination.limit,
     select: {
       id: true,
       status: true,
@@ -980,17 +1017,17 @@ export async function getSubscriptionsIndexData(
   });
 
   const summary = {
-    totalSubscriptions: subscriptions.length,
-    activeSubscriptions: subscriptions.filter(
+    totalSubscriptions,
+    activeSubscriptions: summaryRows.filter(
       (subscription) => subscription.status === SubscriptionStatus.ACTIVE,
     ).length,
-    overdueSubscriptions: subscriptions.filter(
+    overdueSubscriptions: summaryRows.filter(
       (subscription) => subscription.status === SubscriptionStatus.PAST_DUE,
     ).length,
-    autoRenewSubscriptions: subscriptions.filter(
+    autoRenewSubscriptions: summaryRows.filter(
       (subscription) => subscription.autoRenew,
     ).length,
-    recurringRevenueCents: subscriptions
+    recurringRevenueCents: summaryRows
       .filter((subscription) =>
         autoSyncedSubscriptionStatuses.includes(subscription.status),
       )
@@ -1003,8 +1040,9 @@ export async function getSubscriptionsIndexData(
 
   return {
     subscriptions,
+    pagination,
     summary,
-    options: await getSubscriptionOptions(viewer),
+    options,
     canManage: hasPermission(viewer.role, "manageSubscriptions"),
   };
 }
@@ -1387,9 +1425,28 @@ export async function getPaymentsIndexData(
     ],
   };
 
+  const [totalPayments, summaryRows, options] = await Promise.all([
+    prisma.payment.count({ where }),
+    prisma.payment.findMany({
+      where,
+      select: {
+        amountCents: true,
+        status: true,
+        dueDate: true,
+        studentProfileId: true,
+      },
+    }),
+    getPaymentOptions(viewer),
+  ]);
+  const pagination = buildOffsetPagination({
+    page: filters.page,
+    totalItems: totalPayments,
+  });
   const payments = await prisma.payment.findMany({
     where,
     orderBy: [{ dueDate: "desc" }, { createdAt: "desc" }],
+    skip: pagination.skip,
+    take: pagination.limit,
     select: {
       id: true,
       amountCents: true,
@@ -1426,7 +1483,7 @@ export async function getPaymentsIndexData(
     },
   });
 
-  const summary = payments.reduce(
+  const summary = summaryRows.reduce(
     (accumulator, payment) => {
       const overdue = isPaymentOverdue(payment.status, payment.dueDate, today);
 
@@ -1445,7 +1502,7 @@ export async function getPaymentsIndexData(
       if (overdue) {
         accumulator.overduePayments += 1;
         accumulator.overdueCents += payment.amountCents;
-        accumulator.delinquentStudentIds.add(payment.studentProfile.id);
+        accumulator.delinquentStudentIds.add(payment.studentProfileId);
       }
 
       return accumulator;
@@ -1464,6 +1521,7 @@ export async function getPaymentsIndexData(
 
   return {
     payments,
+    pagination,
     summary: {
       totalPayments: summary.totalPayments,
       pendingPayments: summary.pendingPayments,
@@ -1474,7 +1532,7 @@ export async function getPaymentsIndexData(
       receivedCents: summary.receivedCents,
       delinquentStudents: summary.delinquentStudentIds.size,
     },
-    options: await getPaymentOptions(viewer),
+    options,
     canManage: hasPermission(viewer.role, "managePayments"),
   };
 }

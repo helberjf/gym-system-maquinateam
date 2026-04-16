@@ -16,7 +16,7 @@ export default async function NewClassSchedulePage() {
     "/dashboard/turmas/nova",
   );
   const viewer = await getViewerContextFromSession(session);
-  const data = await getClassSchedulesIndexData(viewer, {});
+  const data = await getClassSchedulesIndexData(viewer, { page: 1 });
 
   return (
     <div className="space-y-6">

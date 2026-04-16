@@ -222,6 +222,9 @@ export const checkoutSchema = z.object({
 export const couponFiltersSchema = z.object({
   q: optionalTrimmedString,
   active: z.enum(["all", "true", "false"]).optional().default("all"),
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 export const couponSchema = z.object({
@@ -269,6 +272,9 @@ export const updateCouponSchema = couponSchema.extend({
 export const orderFiltersSchema = z.object({
   q: optionalTrimmedString,
   status: z.union([z.literal("all"), z.nativeEnum(OrderStatus)]).optional().default("all"),
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 export const updateOrderStatusSchema = z.object({

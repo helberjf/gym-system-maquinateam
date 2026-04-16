@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { getViewerContextFromSession } from "@/lib/academy/access";
@@ -126,6 +127,7 @@ export default async function PlansPage({
           actionHref={data.canManage ? "/dashboard/planos/novo" : undefined}
         />
       ) : (
+        <>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {data.plans.map((plan) => (
             <article
@@ -198,6 +200,13 @@ export default async function PlansPage({
             </article>
           ))}
         </section>
+
+        <PaginationControls
+          pathname="/dashboard/planos"
+          pagination={data.pagination}
+          searchParams={rawSearchParams}
+        />
+        </>
       )}
     </div>
   );

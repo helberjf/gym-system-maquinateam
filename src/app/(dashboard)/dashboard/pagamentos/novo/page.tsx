@@ -16,7 +16,7 @@ export default async function NewPaymentPage() {
     "/dashboard/pagamentos/novo",
   );
   const viewer = await getViewerContextFromSession(session);
-  const data = await getPaymentsIndexData(viewer, {});
+  const data = await getPaymentsIndexData(viewer, { page: 1 });
 
   return (
     <div className="space-y-6">

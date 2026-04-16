@@ -16,7 +16,7 @@ export default async function NewSubscriptionPage() {
     "/dashboard/assinaturas/nova",
   );
   const viewer = await getViewerContextFromSession(session);
-  const data = await getSubscriptionsIndexData(viewer, {});
+  const data = await getSubscriptionsIndexData(viewer, { page: 1 });
 
   return (
     <div className="space-y-6">

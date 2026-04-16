@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { requirePermission } from "@/lib/auth/guards";
@@ -37,7 +38,7 @@ export default async function MyOrdersPage({
     flattenSearchParams(rawSearchParams),
     orderFiltersSchema,
   );
-  const orders = await getMyOrdersData(session.user.id, filters);
+  const data = await getMyOrdersData(session.user.id, filters);
 
   return (
     <div className="space-y-6">
@@ -85,7 +86,7 @@ export default async function MyOrdersPage({
         </form>
       </section>
 
-      {orders.length === 0 ? (
+      {data.orders.length === 0 ? (
         <EmptyState
           title="Nenhum pedido encontrado"
           description="Suas compras da loja aparecerao aqui assim que voce concluir o checkout."
@@ -93,8 +94,9 @@ export default async function MyOrdersPage({
           actionHref="/products"
         />
       ) : (
+        <>
         <section className="space-y-4">
-          {orders.map((order) => (
+          {data.orders.map((order) => (
             <article
               key={order.id}
               className="rounded-3xl border border-brand-gray-mid bg-brand-gray-dark p-5"
@@ -152,6 +154,13 @@ export default async function MyOrdersPage({
             </article>
           ))}
         </section>
+
+        <PaginationControls
+          pathname="/dashboard/pedidos"
+          pagination={data.pagination}
+          searchParams={rawSearchParams}
+        />
+        </>
       )}
     </div>
   );

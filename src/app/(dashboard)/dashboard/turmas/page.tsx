@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { getViewerContextFromSession } from "@/lib/academy/access";
@@ -28,8 +29,9 @@ export default async function ClassSchedulesPage({
     "/dashboard/turmas",
   );
   const viewer = await getViewerContextFromSession(session);
+  const rawSearchParams = await searchParams;
   const filters = parseSearchParams(
-    flattenSearchParams(await searchParams),
+    flattenSearchParams(rawSearchParams),
     classScheduleFiltersSchema,
   );
   const data = await getClassSchedulesIndexData(viewer, filters);
@@ -114,6 +116,7 @@ export default async function ClassSchedulesPage({
           actionHref={data.canManage ? "/dashboard/turmas/nova" : undefined}
         />
       ) : (
+        <>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {data.classSchedules.map((classSchedule) => (
             <article
@@ -175,6 +178,13 @@ export default async function ClassSchedulesPage({
             </article>
           ))}
         </section>
+
+        <PaginationControls
+          pathname="/dashboard/turmas"
+          pagination={data.pagination}
+          searchParams={rawSearchParams}
+        />
+        </>
       )}
     </div>
   );

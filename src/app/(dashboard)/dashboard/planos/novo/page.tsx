@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default async function NewPlanPage() {
   const session = await requirePermission("managePlans", "/dashboard/planos/novo");
   const viewer = await getViewerContextFromSession(session);
-  const data = await getPlansIndexData(viewer, {});
+  const data = await getPlansIndexData(viewer, { page: 1 });
 
   return (
     <div className="space-y-6">

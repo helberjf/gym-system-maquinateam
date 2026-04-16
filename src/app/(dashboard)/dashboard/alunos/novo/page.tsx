@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default async function NewStudentPage() {
   const session = await requirePermission("manageStudents", "/dashboard/alunos/novo");
   const viewer = await getViewerContextFromSession(session);
-  const data = await getStudentsIndexData(viewer, {});
+  const data = await getStudentsIndexData(viewer, { page: 1 });
 
   return (
     <div className="space-y-6">

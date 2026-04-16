@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { getViewerContextFromSession } from "@/lib/academy/access";
@@ -162,6 +163,7 @@ export default async function PaymentsPage({
           actionHref={data.canManage ? "/dashboard/pagamentos/novo" : undefined}
         />
       ) : (
+        <>
         <section className="space-y-4">
           {data.payments.map((payment) => (
             <article
@@ -229,6 +231,13 @@ export default async function PaymentsPage({
             </article>
           ))}
         </section>
+
+        <PaginationControls
+          pathname="/dashboard/pagamentos"
+          pagination={data.pagination}
+          searchParams={rawSearchParams}
+        />
+        </>
       )}
     </div>
   );

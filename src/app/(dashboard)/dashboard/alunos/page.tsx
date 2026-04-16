@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { getViewerContextFromSession } from "@/lib/academy/access";
@@ -113,6 +114,7 @@ export default async function StudentsPage({
           actionHref={data.canManage ? "/dashboard/alunos/novo" : undefined}
         />
       ) : (
+        <>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {data.students.map((student) => (
             <article
@@ -186,6 +188,13 @@ export default async function StudentsPage({
             </article>
           ))}
         </section>
+
+        <PaginationControls
+          pathname="/dashboard/alunos"
+          pagination={data.pagination}
+          searchParams={rawSearchParams}
+        />
+        </>
       )}
     </div>
   );

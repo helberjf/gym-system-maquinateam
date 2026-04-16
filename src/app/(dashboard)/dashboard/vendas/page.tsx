@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { requirePermission } from "@/lib/auth/guards";
@@ -152,6 +153,7 @@ export default async function ProductSalesPage({
           actionHref={data.canManage ? "/dashboard/vendas/nova" : undefined}
         />
       ) : (
+        <>
         <section className="space-y-4">
           {data.sales.map((sale) => (
             <article
@@ -224,6 +226,13 @@ export default async function ProductSalesPage({
             </article>
           ))}
         </section>
+
+        <PaginationControls
+          pathname="/dashboard/vendas"
+          pagination={data.pagination}
+          searchParams={rawSearchParams}
+        />
+        </>
       )}
     </div>
   );

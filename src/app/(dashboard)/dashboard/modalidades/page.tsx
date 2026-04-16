@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { getViewerContextFromSession } from "@/lib/academy/access";
@@ -24,8 +25,9 @@ export default async function ModalitiesPage({
 }) {
   const session = await requirePermission("viewModalities", "/dashboard/modalidades");
   const viewer = await getViewerContextFromSession(session);
+  const rawSearchParams = await searchParams;
   const filters = parseSearchParams(
-    flattenSearchParams(await searchParams),
+    flattenSearchParams(rawSearchParams),
     modalityFiltersSchema,
   );
   const data = await getModalitiesIndexData(viewer, filters);
@@ -82,6 +84,7 @@ export default async function ModalitiesPage({
           actionHref={data.canManage ? "/dashboard/modalidades/nova" : undefined}
         />
       ) : (
+        <>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {data.modalities.map((modality) => (
             <article
@@ -134,6 +137,13 @@ export default async function ModalitiesPage({
             </article>
           ))}
         </section>
+
+        <PaginationControls
+          pathname="/dashboard/modalidades"
+          pagination={data.pagination}
+          searchParams={rawSearchParams}
+        />
+        </>
       )}
     </div>
   );

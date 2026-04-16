@@ -28,6 +28,7 @@ import {
   NotFoundError,
 } from "@/lib/errors";
 import { hasPermission } from "@/lib/permissions";
+import { buildOffsetPagination } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import {
   attendanceFiltersSchema,
@@ -504,78 +505,86 @@ export async function getStudentsIndexData(
         : undefined,
   );
 
-  const [students, options] = await Promise.all([
-    prisma.studentProfile.findMany({
-      where,
-      orderBy: [
-        {
-          user: {
-            name: "asc",
-          },
-        },
-      ],
-      select: {
-        id: true,
-        registrationNumber: true,
-        status: true,
-        joinedAt: true,
-        primaryModality: {
-          select: {
-            id: true,
-            name: true,
-            colorHex: true,
-          },
-        },
-        responsibleTeacher: {
-          select: {
-            id: true,
-            user: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
+  const [totalStudents, options] = await Promise.all([
+    prisma.studentProfile.count({ where }),
+    getStudentOptions(viewer),
+  ]);
+  const pagination = buildOffsetPagination({
+    page: filters.page,
+    totalItems: totalStudents,
+  });
+  const students = await prisma.studentProfile.findMany({
+    where,
+    orderBy: [
+      {
         user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            isActive: true,
-          },
+          name: "asc",
         },
-        enrollments: {
-          where: {
-            isActive: true,
-          },
-          take: 2,
-          orderBy: {
-            enrolledAt: "desc",
-          },
-          select: {
-            id: true,
-            classSchedule: {
-              select: {
-                id: true,
-                title: true,
-              },
+      },
+    ],
+    skip: pagination.skip,
+    take: pagination.limit,
+    select: {
+      id: true,
+      registrationNumber: true,
+      status: true,
+      joinedAt: true,
+      primaryModality: {
+        select: {
+          id: true,
+          name: true,
+          colorHex: true,
+        },
+      },
+      responsibleTeacher: {
+        select: {
+          id: true,
+          user: {
+            select: {
+              name: true,
             },
-          },
-        },
-        _count: {
-          select: {
-            attendances: true,
-            enrollments: true,
           },
         },
       },
-    }),
-    getStudentOptions(viewer),
-  ]);
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          isActive: true,
+        },
+      },
+      enrollments: {
+        where: {
+          isActive: true,
+        },
+        take: 2,
+        orderBy: {
+          enrolledAt: "desc",
+        },
+        select: {
+          id: true,
+          classSchedule: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      },
+      _count: {
+        select: {
+          attendances: true,
+          enrollments: true,
+        },
+      },
+    },
+  });
 
   return {
     students,
+    pagination,
     options,
     canManage: hasPermission(viewer.role, "manageStudents"),
   };
@@ -773,49 +782,57 @@ export async function getTeachersIndexData(
     ],
   };
 
-  const [teachers, options] = await Promise.all([
-    prisma.teacherProfile.findMany({
-      where,
-      orderBy: {
-        user: {
-          name: "asc",
-        },
-      },
-      select: {
-        id: true,
-        registrationNumber: true,
-        specialties: true,
-        experienceYears: true,
-        isActive: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            isActive: true,
-          },
-        },
-        modalities: {
-          select: {
-            id: true,
-            name: true,
-          },
-          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-        },
-        _count: {
-          select: {
-            classes: true,
-            responsibleStudents: true,
-          },
-        },
-      },
-    }),
+  const [totalTeachers, options] = await Promise.all([
+    prisma.teacherProfile.count({ where }),
     getTeacherOptions(viewer),
   ]);
+  const pagination = buildOffsetPagination({
+    page: filters.page,
+    totalItems: totalTeachers,
+  });
+  const teachers = await prisma.teacherProfile.findMany({
+    where,
+    orderBy: {
+      user: {
+        name: "asc",
+      },
+    },
+    skip: pagination.skip,
+    take: pagination.limit,
+    select: {
+      id: true,
+      registrationNumber: true,
+      specialties: true,
+      experienceYears: true,
+      isActive: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          isActive: true,
+        },
+      },
+      modalities: {
+        select: {
+          id: true,
+          name: true,
+        },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      },
+      _count: {
+        select: {
+          classes: true,
+          responsibleStudents: true,
+        },
+      },
+    },
+  });
 
   return {
     teachers,
+    pagination,
     options,
     canManage: hasPermission(viewer.role, "manageTeachers"),
   };
@@ -945,9 +962,18 @@ export async function getModalitiesIndexData(
     ],
   };
 
+  const totalModalities = await prisma.modality.count({
+    where,
+  });
+  const pagination = buildOffsetPagination({
+    page: filters.page,
+    totalItems: totalModalities,
+  });
   const modalities = await prisma.modality.findMany({
     where,
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    skip: pagination.skip,
+    take: pagination.limit,
     select: {
       id: true,
       name: true,
@@ -968,6 +994,7 @@ export async function getModalitiesIndexData(
 
   return {
     modalities,
+    pagination,
     canManage: hasPermission(viewer.role, "manageModalities"),
   };
 }
@@ -1131,55 +1158,63 @@ export async function getClassSchedulesIndexData(
     ],
   };
 
-  const [classSchedules, options] = await Promise.all([
-    prisma.classSchedule.findMany({
-      where,
-      orderBy: [{ isActive: "desc" }, { startTime: "asc" }, { title: "asc" }],
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        dayOfWeek: true,
-        daysOfWeek: true,
-        startTime: true,
-        endTime: true,
-        room: true,
-        capacity: true,
-        isActive: true,
-        modality: {
-          select: {
-            id: true,
-            name: true,
-            colorHex: true,
-          },
+  const [totalClassSchedules, options] = await Promise.all([
+    prisma.classSchedule.count({ where }),
+    getClassScheduleOptions(viewer),
+  ]);
+  const pagination = buildOffsetPagination({
+    page: filters.page,
+    totalItems: totalClassSchedules,
+  });
+  const classSchedules = await prisma.classSchedule.findMany({
+    where,
+    orderBy: [{ isActive: "desc" }, { startTime: "asc" }, { title: "asc" }],
+    skip: pagination.skip,
+    take: pagination.limit,
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      dayOfWeek: true,
+      daysOfWeek: true,
+      startTime: true,
+      endTime: true,
+      room: true,
+      capacity: true,
+      isActive: true,
+      modality: {
+        select: {
+          id: true,
+          name: true,
+          colorHex: true,
         },
-        teacherProfile: {
-          select: {
-            id: true,
-            user: {
-              select: {
-                name: true,
-              },
+      },
+      teacherProfile: {
+        select: {
+          id: true,
+          user: {
+            select: {
+              name: true,
             },
-          },
-        },
-        _count: {
-          select: {
-            enrollments: {
-              where: {
-                isActive: true,
-              },
-            },
-            attendances: true,
           },
         },
       },
-    }),
-    getClassScheduleOptions(viewer),
-  ]);
+      _count: {
+        select: {
+          enrollments: {
+            where: {
+              isActive: true,
+            },
+          },
+          attendances: true,
+        },
+      },
+    },
+  });
 
   return {
     classSchedules,
+    pagination,
     options,
     canManage: hasPermission(viewer.role, "manageClassSchedules"),
   };

@@ -119,6 +119,9 @@ export const studentFiltersSchema = z.object({
   modalityId: optionalTrimmedString,
   teacherId: optionalTrimmedString,
   onlyInactive: optionalBoolean,
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 const studentBaseSchema = z.object({
@@ -181,6 +184,9 @@ export const teacherFiltersSchema = z.object({
   search: optionalTrimmedString,
   modalityId: optionalTrimmedString,
   onlyInactive: optionalBoolean,
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 const teacherBaseSchema = z.object({
@@ -230,6 +236,9 @@ export const updateTeacherSchema = teacherBaseSchema.extend({
 export const modalityFiltersSchema = z.object({
   search: optionalTrimmedString,
   onlyInactive: optionalBoolean,
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 export const createModalitySchema = z.object({
@@ -265,6 +274,9 @@ export const classScheduleFiltersSchema = z.object({
     "Dia da semana invalido.",
   ),
   onlyInactive: optionalBoolean,
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 const classScheduleBaseSchema = z.object({

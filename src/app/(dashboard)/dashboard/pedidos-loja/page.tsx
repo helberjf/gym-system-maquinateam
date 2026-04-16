@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { flattenSearchParams } from "@/lib/academy/presentation";
@@ -85,6 +86,7 @@ export default async function StoreOrdersAdminPage({
           description="Os novos pedidos da loja aparecerao aqui assim que os checkouts forem concluídos."
         />
       ) : (
+        <>
         <section className="space-y-4">
           {data.orders.map((order) => (
             <article
@@ -141,6 +143,13 @@ export default async function StoreOrdersAdminPage({
             </article>
           ))}
         </section>
+
+        <PaginationControls
+          pathname="/dashboard/pedidos-loja"
+          pagination={data.pagination}
+          searchParams={rawSearchParams}
+        />
+        </>
       )}
     </div>
   );

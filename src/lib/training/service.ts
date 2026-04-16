@@ -24,6 +24,7 @@ import {
   NotFoundError,
 } from "@/lib/errors";
 import { hasPermission } from "@/lib/permissions";
+import { buildOffsetPagination } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import {
   buildTrainingStructure,
@@ -2162,53 +2163,105 @@ export async function getAnnouncementsIndexData(
   const canManage = hasPermission(viewer.role, "manageAnnouncements");
   const isPublishedFilter =
     filters.isPublished === undefined ? undefined : filters.isPublished;
+  const now = Date.now();
+
+  const buildAnnouncementSummary = (
+    announcements: Array<{ isPublished: boolean; isPinned: boolean; expiresAt: Date | null }>,
+  ) => ({
+    total: announcements.length,
+    published: announcements.filter((announcement) => announcement.isPublished).length,
+    pinned: announcements.filter((announcement) => announcement.isPinned).length,
+    expiringSoon: announcements.filter((announcement) => {
+      if (!announcement.expiresAt) {
+        return false;
+      }
+
+      return (
+        announcement.expiresAt.getTime() > now &&
+        announcement.expiresAt.getTime() <= now + 7 * 24 * 60 * 60 * 1000
+      );
+    }).length,
+  });
 
   if (viewer.role === UserRole.ADMIN || viewer.role === UserRole.RECEPCAO) {
-    const announcements = await prisma.announcement.findMany({
-      where: {
-        AND: [
-          filters.search
-            ? {
-                OR: [
-                  {
-                    title: {
-                      contains: filters.search,
-                      mode: "insensitive",
-                    },
+    const adminWhere = {
+      AND: [
+        filters.search
+          ? {
+              OR: [
+                {
+                  title: {
+                    contains: filters.search,
+                    mode: "insensitive",
                   },
-                  {
-                    excerpt: {
-                      contains: filters.search,
-                      mode: "insensitive",
-                    },
-                  },
-                  {
-                    content: {
-                      contains: filters.search,
-                      mode: "insensitive",
-                    },
-                  },
-                ],
-              }
-            : {},
-          filters.targetRole === undefined
-            ? {}
-            : filters.targetRole === null
-              ? {
-                  targetRole: null,
-                }
-              : {
-                  targetRole: filters.targetRole,
                 },
-          isPublishedFilter === undefined
-            ? {}
+                {
+                  excerpt: {
+                    contains: filters.search,
+                    mode: "insensitive",
+                  },
+                },
+                {
+                  content: {
+                    contains: filters.search,
+                    mode: "insensitive",
+                  },
+                },
+              ],
+            }
+          : {},
+        filters.targetRole === undefined
+          ? {}
+          : filters.targetRole === null
+            ? {
+                targetRole: null,
+              }
             : {
-                isPublished: isPublishedFilter,
+                targetRole: filters.targetRole,
               },
-        ],
-      },
+        isPublishedFilter === undefined
+          ? {}
+          : {
+              isPublished: isPublishedFilter,
+            },
+      ],
+    } satisfies Prisma.AnnouncementWhereInput;
+    const [totalAnnouncements, publishedAnnouncements, pinnedAnnouncements, expiringSoonAnnouncements] =
+      await Promise.all([
+        prisma.announcement.count({ where: adminWhere }),
+        prisma.announcement.count({
+          where: {
+            AND: [adminWhere, { isPublished: true }],
+          },
+        }),
+        prisma.announcement.count({
+          where: {
+            AND: [adminWhere, { isPinned: true }],
+          },
+        }),
+        prisma.announcement.count({
+          where: {
+            AND: [
+              adminWhere,
+              {
+                expiresAt: {
+                  gt: new Date(now),
+                  lte: new Date(now + 7 * 24 * 60 * 60 * 1000),
+                },
+              },
+            ],
+          },
+        }),
+      ]);
+    const pagination = buildOffsetPagination({
+      page: filters.page,
+      totalItems: totalAnnouncements,
+    });
+    const announcements = await prisma.announcement.findMany({
+      where: adminWhere,
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }, { createdAt: "desc" }],
-      take: 24,
+      skip: pagination.skip,
+      take: pagination.limit,
       select: {
         id: true,
         title: true,
@@ -2239,22 +2292,12 @@ export async function getAnnouncementsIndexData(
 
     return {
       announcements,
+      pagination,
       summary: {
-        total: announcements.length,
-        published: announcements.filter((announcement) => announcement.isPublished)
-          .length,
-        pinned: announcements.filter((announcement) => announcement.isPinned).length,
-        expiringSoon: announcements.filter((announcement) => {
-          if (!announcement.expiresAt) {
-            return false;
-          }
-
-          return (
-            announcement.expiresAt.getTime() > Date.now() &&
-            announcement.expiresAt.getTime() <=
-              Date.now() + 7 * 24 * 60 * 60 * 1000
-          );
-        }).length,
+        total: totalAnnouncements,
+        published: publishedAnnouncements,
+        pinned: pinnedAnnouncements,
+        expiringSoon: expiringSoonAnnouncements,
       },
       canManage,
     };
@@ -2308,7 +2351,6 @@ export async function getAnnouncementsIndexData(
         ],
       },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }, { createdAt: "desc" }],
-      take: 24,
       select: {
         id: true,
         title: true,
@@ -2348,60 +2390,45 @@ export async function getAnnouncementsIndexData(
               filters.targetRole === null
                 ? filters.targetRole ?? undefined
                 : undefined,
-            take: 12,
           });
 
-    const announcements = mergeAnnouncementsById([
+    const mergedAnnouncements = mergeAnnouncementsById([
       ...ownAnnouncements,
       ...publicAnnouncements,
-    ]).slice(0, 24);
+    ]);
+    const pagination = buildOffsetPagination({
+      page: filters.page,
+      totalItems: mergedAnnouncements.length,
+    });
+    const announcements = mergedAnnouncements.slice(
+      pagination.skip,
+      pagination.skip + pagination.limit,
+    );
 
     return {
       announcements,
-      summary: {
-        total: announcements.length,
-        published: announcements.filter((announcement) => announcement.isPublished)
-          .length,
-        pinned: announcements.filter((announcement) => announcement.isPinned).length,
-        expiringSoon: announcements.filter((announcement) => {
-          if (!announcement.expiresAt) {
-            return false;
-          }
-
-          return (
-            announcement.expiresAt.getTime() > Date.now() &&
-            announcement.expiresAt.getTime() <=
-              Date.now() + 7 * 24 * 60 * 60 * 1000
-          );
-        }).length,
-      },
+      pagination,
+      summary: buildAnnouncementSummary(mergedAnnouncements),
       canManage,
     };
   }
 
-  const announcements = await getVisiblePublishedAnnouncements(viewer, {
+  const visibleAnnouncements = await getVisiblePublishedAnnouncements(viewer, {
     search: filters.search,
-    take: 24,
   });
+  const pagination = buildOffsetPagination({
+    page: filters.page,
+    totalItems: visibleAnnouncements.length,
+  });
+  const announcements = visibleAnnouncements.slice(
+    pagination.skip,
+    pagination.skip + pagination.limit,
+  );
 
   return {
     announcements,
-    summary: {
-      total: announcements.length,
-      published: announcements.length,
-      pinned: announcements.filter((announcement) => announcement.isPinned).length,
-      expiringSoon: announcements.filter((announcement) => {
-        if (!announcement.expiresAt) {
-          return false;
-        }
-
-        return (
-          announcement.expiresAt.getTime() > Date.now() &&
-          announcement.expiresAt.getTime() <=
-            Date.now() + 7 * 24 * 60 * 60 * 1000
-        );
-      }).length,
-    },
+    pagination,
+    summary: buildAnnouncementSummary(visibleAnnouncements),
     canManage,
   };
 }

@@ -88,6 +88,9 @@ export const trainingTemplateFiltersSchema = z.object({
   modalityId: optionalTrimmedString,
   level: optionalTrimmedString,
   onlyInactive: optionalBoolean,
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 const trainingTemplateBaseSchema = z.object({
@@ -127,6 +130,9 @@ export const trainingAssignmentFiltersSchema = z.object({
   modalityId: optionalTrimmedString,
   status: optionalTrainingAssignmentStatus,
   level: optionalTrimmedString,
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 const trainingAssignmentBaseSchema = z.object({
@@ -170,6 +176,9 @@ export const announcementFiltersSchema = z.object({
   search: optionalTrimmedString,
   targetRole: optionalUserRole,
   isPublished: optionalBoolean,
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 export const createAnnouncementSchema = z

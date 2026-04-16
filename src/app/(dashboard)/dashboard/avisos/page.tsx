@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { getViewerContextFromSession } from "@/lib/academy/access";
@@ -28,8 +29,9 @@ export default async function AnnouncementsPage({
 }) {
   const session = await requirePermission("viewAnnouncements", "/dashboard/avisos");
   const viewer = await getViewerContextFromSession(session);
+  const rawSearchParams = await searchParams;
   const filters = parseSearchParams(
-    flattenSearchParams(await searchParams),
+    flattenSearchParams(rawSearchParams),
     announcementFiltersSchema,
   );
   const data = await getAnnouncementsIndexData(viewer, filters);
@@ -117,6 +119,7 @@ export default async function AnnouncementsPage({
           actionHref={data.canManage ? "/dashboard/avisos/novo" : undefined}
         />
       ) : (
+        <>
         <section className="space-y-4">
           {data.announcements.map((announcement) => {
             const expired = Boolean(
@@ -163,6 +166,13 @@ export default async function AnnouncementsPage({
             );
           })}
         </section>
+
+        <PaginationControls
+          pathname="/dashboard/avisos"
+          pagination={data.pagination}
+          searchParams={rawSearchParams}
+        />
+        </>
       )}
     </div>
   );

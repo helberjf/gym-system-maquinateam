@@ -2,6 +2,7 @@ import type { z } from "zod";
 import { CouponDiscountType, Prisma } from "@prisma/client";
 import { logAuditEvent } from "@/lib/audit";
 import { ConflictError, NotFoundError } from "@/lib/errors";
+import { buildOffsetPagination } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import type { createCouponSchema, couponFiltersSchema, updateCouponSchema } from "@/lib/validators/store";
 
@@ -75,19 +76,8 @@ export async function getCouponManagementData(filters: CouponFilters) {
       : {}),
   };
 
-  const [coupons, categories] = await Promise.all([
-    prisma.coupon.findMany({
-      where,
-      orderBy: [{ active: "desc" }, { createdAt: "desc" }],
-      include: {
-        _count: {
-          select: {
-            redemptions: true,
-            orders: true,
-          },
-        },
-      },
-    }),
+  const [totalCoupons, categories] = await Promise.all([
+    prisma.coupon.count({ where }),
     prisma.product.findMany({
       where: {
         storeVisible: true,
@@ -101,9 +91,28 @@ export async function getCouponManagementData(filters: CouponFilters) {
       },
     }),
   ]);
+  const pagination = buildOffsetPagination({
+    page: filters.page,
+    totalItems: totalCoupons,
+  });
+  const coupons = await prisma.coupon.findMany({
+    where,
+    orderBy: [{ active: "desc" }, { createdAt: "desc" }],
+    skip: pagination.skip,
+    take: pagination.limit,
+    include: {
+      _count: {
+        select: {
+          redemptions: true,
+          orders: true,
+        },
+      },
+    },
+  });
 
   return {
     coupons,
+    pagination,
     categories: categories.map((entry) => entry.category),
   };
 }

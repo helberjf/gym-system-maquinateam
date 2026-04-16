@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { requirePermission } from "@/lib/auth/guards";
@@ -138,6 +139,7 @@ export default async function ProductsPage({
           actionHref={data.canManage ? "/dashboard/produtos/novo" : undefined}
         />
       ) : (
+        <>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {data.products.map((product) => {
             const lowStock = isLowStockProduct({
@@ -244,6 +246,13 @@ export default async function ProductsPage({
             );
           })}
         </section>
+
+        <PaginationControls
+          pathname="/dashboard/produtos"
+          pagination={data.pagination}
+          searchParams={rawSearchParams}
+        />
+        </>
       )}
     </div>
   );

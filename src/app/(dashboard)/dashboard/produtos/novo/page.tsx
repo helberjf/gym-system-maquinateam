@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default async function NewProductPage() {
   const session = await requirePermission("manageProducts", "/dashboard/produtos/novo");
   const viewer = await getViewerContextFromSession(session);
-  const data = await getProductsIndexData(viewer, {});
+  const data = await getProductsIndexData(viewer, { page: 1 });
 
   return (
     <div className="space-y-6">

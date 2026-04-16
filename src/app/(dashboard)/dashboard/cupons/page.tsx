@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/dashboard/PageHeader";
+import { PaginationControls } from "@/components/dashboard/PaginationControls";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { ApiActionButton } from "@/components/dashboard/ApiActionButton";
 import { StoreCouponForm } from "@/components/store/StoreCouponForm";
@@ -202,6 +203,12 @@ export default async function CouponsPage({
           </details>
         ))}
       </section>
+
+      <PaginationControls
+        pathname="/dashboard/cupons"
+        pagination={data.pagination}
+        searchParams={rawSearchParams}
+      />
     </div>
   );
 }

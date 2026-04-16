@@ -16,7 +16,7 @@ export default async function NewTeacherPage() {
     "/dashboard/professores/novo",
   );
   const viewer = await getViewerContextFromSession(session);
-  const data = await getTeachersIndexData(viewer, {});
+  const data = await getTeachersIndexData(viewer, { page: 1 });
 
   return (
     <div className="space-y-6">

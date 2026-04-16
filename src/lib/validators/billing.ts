@@ -122,6 +122,9 @@ export const planFiltersSchema = z.object({
   search: optionalTrimmedString,
   modalityId: optionalTrimmedString,
   active: optionalBoolean,
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 const planBaseSchema = z.object({
@@ -161,6 +164,9 @@ export const subscriptionFiltersSchema = z.object({
   autoRenew: optionalBoolean,
   dateFrom: optionalDateString,
   dateTo: optionalDateString,
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 const subscriptionBaseObjectSchema = z.object({
@@ -211,6 +217,9 @@ export const paymentFiltersSchema = z.object({
   method: z.enum(["PIX", "CARD", "CASH", "BANK_TRANSFER", "OTHER"]).optional(),
   dateFrom: optionalDateString,
   dateTo: optionalDateString,
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 const paymentBaseSchema = z.object({

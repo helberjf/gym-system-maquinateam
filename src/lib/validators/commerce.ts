@@ -135,6 +135,9 @@ export const productFiltersSchema = z.object({
       "LOW_STOCK",
     ])
     .optional(),
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 const productBaseSchema = z.object({
@@ -182,6 +185,9 @@ export const saleFiltersSchema = z.object({
   status: z.nativeEnum(SaleStatus).optional(),
   dateFrom: optionalDateString,
   dateTo: optionalDateString,
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
 });
 
 const saleBaseSchema = z.object({

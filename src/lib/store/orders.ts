@@ -20,6 +20,7 @@ import {
   UnauthorizedError,
 } from "@/lib/errors";
 import { hasPermission } from "@/lib/permissions";
+import { buildOffsetPagination } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import { getAppUrl } from "@/lib/app-url";
 import {
@@ -27,6 +28,7 @@ import {
   createMercadoPagoPreference,
   getMercadoPagoWebhookUrl,
   onlyDigits,
+  refundMercadoPagoPayment,
 } from "@/lib/payments/mercadopago";
 import {
   createAbacatePayPixQrCode,
@@ -1177,6 +1179,19 @@ export async function createStoreCheckoutSession(
       orderNumber: created.order.orderNumber,
       totalCents: created.order.totalCents,
       redirectUrl,
+      customerEmail: created.order.customerEmail,
+      customerName: created.order.customerName,
+      subtotalCents: created.subtotalCents,
+      discountCents: created.discountCents,
+      shippingCents: created.selectedShipping.priceCents,
+      deliveryLabel: created.selectedShipping.label,
+      paymentMethod: input.paymentMethod,
+      emailItems: created.items.map((item) => ({
+        productName: item.name,
+        quantity: item.quantity,
+        unitPriceCents: item.priceCents,
+        lineTotalCents: item.priceCents * item.quantity,
+      })),
     };
   } catch (error) {
     await rollbackFailedStoreCheckout({
@@ -1225,11 +1240,20 @@ export async function getMyOrdersData(userId: string, filters?: OrderFilters) {
       : {}),
   };
 
-  return prisma.order.findMany({
+  const totalOrders = await prisma.order.count({
+    where,
+  });
+  const pagination = buildOffsetPagination({
+    page: filters?.page,
+    totalItems: totalOrders,
+  });
+  const orders = await prisma.order.findMany({
     where,
     orderBy: {
       placedAt: "desc",
     },
+    skip: pagination.skip,
+    take: pagination.limit,
     select: {
       id: true,
       orderNumber: true,
@@ -1261,6 +1285,11 @@ export async function getMyOrdersData(userId: string, filters?: OrderFilters) {
       },
     },
   });
+
+  return {
+    orders,
+    pagination,
+  };
 }
 
 export async function getOrderDetailForUser(input: {
@@ -1396,45 +1425,54 @@ export async function getAdminOrdersData(filters: OrderFilters) {
       : {}),
   };
 
-  const [orders, summary] = await Promise.all([
-    prisma.order.findMany({
-      where,
-      orderBy: {
-        placedAt: "desc",
-      },
-      select: {
-        id: true,
-        orderNumber: true,
-        status: true,
-        paymentStatus: true,
-        deliveryMethod: true,
-        deliveryLabel: true,
-        totalCents: true,
-        placedAt: true,
-        customerName: true,
-        items: {
-          take: 2,
-          orderBy: {
-            productName: "asc",
-          },
-          select: {
-            id: true,
-            productName: true,
-            quantity: true,
-          },
-        },
-      },
-    }),
+  const [totalOrders, summary] = await Promise.all([
+    prisma.order.count({ where }),
     prisma.order.groupBy({
       by: ["status"],
+      where,
       _count: {
         _all: true,
       },
     }),
   ]);
+  const pagination = buildOffsetPagination({
+    page: filters.page,
+    totalItems: totalOrders,
+  });
+  const orders = await prisma.order.findMany({
+    where,
+    orderBy: {
+      placedAt: "desc",
+    },
+    skip: pagination.skip,
+    take: pagination.limit,
+    select: {
+      id: true,
+      orderNumber: true,
+      status: true,
+      paymentStatus: true,
+      deliveryMethod: true,
+      deliveryLabel: true,
+      totalCents: true,
+      placedAt: true,
+      customerName: true,
+      items: {
+        take: 2,
+        orderBy: {
+          productName: "asc",
+        },
+        select: {
+          id: true,
+          productName: true,
+          quantity: true,
+        },
+      },
+    },
+  });
 
   return {
     orders,
+    pagination,
     summary,
   };
 }
@@ -1559,4 +1597,77 @@ export async function updateOrderStatus(
 
     return order;
   });
+}
+
+export async function refundStoreOrder(
+  orderId: string,
+  context: MutationContext,
+) {
+  const session = await auth();
+
+  if (!session?.user?.role || !hasPermission(session.user.role, "manageStoreOrders")) {
+    throw new ForbiddenError("Acesso negado.");
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      checkoutPayment: true,
+    },
+  });
+
+  if (!order) {
+    throw new NotFoundError("Pedido nao encontrado.");
+  }
+
+  if (order.paymentStatus !== PaymentStatus.PAID) {
+    throw new ConflictError("Apenas pedidos pagos podem ser estornados.");
+  }
+
+  const checkoutPayment = order.checkoutPayment;
+
+  if (!checkoutPayment?.providerPaymentId) {
+    throw new ConflictError(
+      "Este pedido nao possui um identificador de pagamento no gateway para estorno.",
+    );
+  }
+
+  await refundMercadoPagoPayment(checkoutPayment.providerPaymentId);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({
+      where: { id: orderId },
+      data: {
+        paymentStatus: PaymentStatus.REFUNDED,
+        statusHistory: {
+          create: {
+            status: order.status,
+            note: "Estorno processado pelo administrador.",
+            changedByUserId: context.userId,
+          },
+        },
+      },
+    });
+
+    await tx.checkoutPayment.update({
+      where: { id: checkoutPayment.id },
+      data: { status: PaymentStatus.REFUNDED },
+    });
+  });
+
+  await logAuditEvent({
+    request: context.request,
+    actorId: context.userId,
+    action: "STORE_ORDER_REFUNDED",
+    entityType: "Order",
+    entityId: orderId,
+    summary: `Estorno processado para o pedido ${order.orderNumber}.`,
+    afterData: {
+      orderNumber: order.orderNumber,
+      paymentStatus: PaymentStatus.REFUNDED,
+      providerPaymentId: checkoutPayment.providerPaymentId,
+    },
+  });
+
+  return { orderId, orderNumber: order.orderNumber };
 }

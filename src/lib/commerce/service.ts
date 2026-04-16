@@ -15,6 +15,7 @@ import {
   NotFoundError,
 } from "@/lib/errors";
 import { hasPermission } from "@/lib/permissions";
+import { buildOffsetPagination } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import { deleteFromR2 } from "@/lib/uploads/r2";
 import {
@@ -396,58 +397,37 @@ export async function getProductsIndexData(
     ],
   };
 
-  const [products, categories] = await Promise.all([
+  const productOrderBy = [
+    {
+      status: "asc" as const,
+    },
+    {
+      category: "asc" as const,
+    },
+    {
+      name: "asc" as const,
+    },
+  ];
+
+  const [summaryRows, categories] = await Promise.all([
     prisma.product.findMany({
       where,
-      orderBy: [
-        {
-          status: "asc",
-        },
-        {
-          category: "asc",
-        },
-        {
-          name: "asc",
-        },
-      ],
+      orderBy: productOrderBy,
       select: {
         id: true,
-        name: true,
-        slug: true,
-        sku: true,
-        category: true,
-        shortDescription: true,
-        description: true,
         status: true,
         priceCents: true,
         stockQuantity: true,
         lowStockThreshold: true,
         trackInventory: true,
-        storeVisible: true,
-        featured: true,
-        images: {
-          orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
-          take: 1,
-          select: {
-            id: true,
-            url: true,
-            altText: true,
-            isPrimary: true,
-          },
-        },
-        _count: {
-          select: {
-            saleItems: true,
-          },
-        },
       },
     }),
     getProductCategories(viewer),
   ]);
 
-  const filteredProducts =
+  const filteredProductRows =
     filters.status === "LOW_STOCK"
-      ? products.filter((product) =>
+      ? summaryRows.filter((product) =>
           isLowStockProduct({
             trackInventory: product.trackInventory,
             stockQuantity: product.stockQuantity,
@@ -455,9 +435,70 @@ export async function getProductsIndexData(
             status: product.status,
           }),
         )
+      : summaryRows;
+
+  const pagination = buildOffsetPagination({
+    page: filters.page,
+    totalItems: filteredProductRows.length,
+  });
+  const pagedProductIds =
+    filters.status === "LOW_STOCK"
+      ? filteredProductRows
+          .slice(pagination.skip, pagination.skip + pagination.limit)
+          .map((product) => product.id)
+      : null;
+  const products = await prisma.product.findMany({
+    where:
+      filters.status === "LOW_STOCK"
+        ? {
+            id: {
+              in: pagedProductIds ?? [],
+            },
+          }
+        : where,
+    orderBy: filters.status === "LOW_STOCK" ? undefined : productOrderBy,
+    skip: filters.status === "LOW_STOCK" ? undefined : pagination.skip,
+    take: filters.status === "LOW_STOCK" ? undefined : pagination.limit,
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      sku: true,
+      category: true,
+      shortDescription: true,
+      description: true,
+      status: true,
+      priceCents: true,
+      stockQuantity: true,
+      lowStockThreshold: true,
+      trackInventory: true,
+      storeVisible: true,
+      featured: true,
+      images: {
+        orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+        take: 1,
+        select: {
+          id: true,
+          url: true,
+          altText: true,
+          isPrimary: true,
+        },
+      },
+      _count: {
+        select: {
+          saleItems: true,
+        },
+      },
+    },
+  });
+  const orderedProducts =
+    filters.status === "LOW_STOCK" && pagedProductIds
+      ? pagedProductIds
+          .map((productId) => products.find((product) => product.id === productId))
+          .filter((product): product is (typeof products)[number] => Boolean(product))
       : products;
 
-  const summary = filteredProducts.reduce(
+  const summary = filteredProductRows.reduce(
     (accumulator, product) => {
       accumulator.totalProducts += 1;
       accumulator.inventoryValueCents += product.priceCents * product.stockQuantity;
@@ -498,7 +539,8 @@ export async function getProductsIndexData(
   );
 
   return {
-    products: filteredProducts,
+    products: orderedProducts,
+    pagination,
     summary,
     options: {
       categories,
@@ -982,53 +1024,16 @@ export async function getProductSalesIndexData(
     ],
   };
 
-  const [sales, lowStockProductsCount] = await prisma.$transaction([
+  const [totalSales, summaryRows, lowStockProductsCount, options] = await Promise.all([
+    prisma.productSale.count({ where }),
     prisma.productSale.findMany({
       where,
-      orderBy: [{ soldAt: "desc" }, { createdAt: "desc" }],
       select: {
-        id: true,
-        saleNumber: true,
         status: true,
-        paymentMethod: true,
-        subtotalCents: true,
-        discountCents: true,
         totalCents: true,
-        customerName: true,
-        soldAt: true,
-        studentProfile: {
-          select: {
-            id: true,
-            registrationNumber: true,
-            user: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-        soldByUser: {
-          select: {
-            name: true,
-          },
-        },
         items: {
-          orderBy: {
-            product: {
-              name: "asc",
-            },
-          },
           select: {
-            id: true,
             quantity: true,
-            lineTotalCents: true,
-            product: {
-              select: {
-                id: true,
-                name: true,
-                category: true,
-              },
-            },
           },
         },
       },
@@ -1047,9 +1052,66 @@ export async function getProductSalesIndexData(
         trackInventory: true,
       },
     }),
+    getSaleOptions(viewer),
   ]);
+  const pagination = buildOffsetPagination({
+    page: filters.page,
+    totalItems: totalSales,
+  });
+  const sales = await prisma.productSale.findMany({
+    where,
+    orderBy: [{ soldAt: "desc" }, { createdAt: "desc" }],
+    skip: pagination.skip,
+    take: pagination.limit,
+    select: {
+      id: true,
+      saleNumber: true,
+      status: true,
+      paymentMethod: true,
+      subtotalCents: true,
+      discountCents: true,
+      totalCents: true,
+      customerName: true,
+      soldAt: true,
+      studentProfile: {
+        select: {
+          id: true,
+          registrationNumber: true,
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+      soldByUser: {
+        select: {
+          name: true,
+        },
+      },
+      items: {
+        orderBy: {
+          product: {
+            name: "asc",
+          },
+        },
+        select: {
+          id: true,
+          quantity: true,
+          lineTotalCents: true,
+          product: {
+            select: {
+              id: true,
+              name: true,
+              category: true,
+            },
+          },
+        },
+      },
+    },
+  });
 
-  const summary = sales.reduce(
+  const summary = summaryRows.reduce(
     (accumulator, sale) => {
       accumulator.totalSales += 1;
       accumulator.totalItems += sale.items.reduce(
@@ -1079,13 +1141,14 @@ export async function getProductSalesIndexData(
 
   return {
     sales,
+    pagination,
     summary: {
       ...summary,
       lowStockProducts: lowStockProductsCount.filter((product) =>
         isLowStockProduct(product),
       ).length,
     },
-    options: await getSaleOptions(viewer),
+    options,
     canManage: hasPermission(viewer.role, "manageSales"),
   };
 }
