@@ -8,8 +8,10 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-brand-black">
-      <header className="border-b border-brand-gray-mid bg-brand-black/85 px-4 py-4 backdrop-blur sm:px-6">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_24%),linear-gradient(180deg,#090909_0%,#050505_100%)]">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.03),transparent_32%,transparent_68%,rgba(255,255,255,0.025))]" />
+
+      <header className="relative border-b border-brand-gray-mid bg-brand-black/75 px-4 py-4 backdrop-blur-xl sm:px-6">
         <Link href="/" className="flex w-fit items-center gap-2.5 sm:gap-3">
           <Image
             src="/images/logo.jpg"
@@ -29,11 +31,11 @@ export default function AuthLayout({
         </Link>
       </header>
 
-      <main className="flex flex-1 items-center justify-center px-4 py-12">
+      <main className="relative flex flex-1 items-start justify-center px-4 py-8 sm:px-6 sm:py-10 lg:items-center">
         {children}
       </main>
 
-      <footer className="py-4 text-center text-xs text-brand-gray-light">
+      <footer className="relative py-4 text-center text-xs text-brand-gray-light">
         &copy; {new Date().getFullYear()} {BRAND.name}
       </footer>
     </div>

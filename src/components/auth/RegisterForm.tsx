@@ -4,6 +4,15 @@ import { useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import {
+  authErrorMessageClassName,
+  authFooterLinkClassName,
+  authHintTextClassName,
+  authInputClassName,
+  authLabelClassName,
+  authPrimaryButtonClassName,
+  authReadonlyInputClassName,
+} from "@/components/auth/styles";
 import { sanitizeCallbackUrl } from "@/lib/auth/callback-url";
 import {
   formatCpf,
@@ -58,6 +67,12 @@ function normalizePhoneForSubmit(country: PhoneCountry, value: string) {
   return value.trim();
 }
 
+const formSectionClassName =
+  "space-y-4 rounded-[1.45rem] border border-white/10 bg-white/[0.03] p-4 sm:p-5";
+
+const formSectionTitleClassName =
+  "text-xs font-semibold uppercase tracking-[0.22em] text-brand-white";
+
 export function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -100,6 +115,10 @@ export function RegisterForm() {
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) {
     const { name, value } = event.target;
+
+    if (name === "zipCode") {
+      setCepError(null);
+    }
 
     setForm((previous) => {
       if (name === "cpf") {
@@ -274,262 +293,349 @@ export function RegisterForm() {
     }
   }
 
-  const baseInputClassName =
-    "w-full rounded-md border px-2 py-1 text-[12px] disabled:opacity-60";
-  const inputClassName =
-    `${baseInputClassName} border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100`;
-  const readonlyInputClassName =
-    `${inputClassName} cursor-not-allowed bg-neutral-100 dark:bg-neutral-900`;
-  const labelClassName = "text-[10px] text-neutral-600 dark:text-neutral-400";
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-1">
-      <div className="space-y-px">
-        <span className={labelClassName}>
-          Nome completo{" "}
-          {form.name ? (
-            <span className={nameValid ? "text-green-600" : "text-red-600"}>
-              {nameValid ? "OK" : "X"}
-            </span>
-          ) : null}
-        </span>
-        <input
-          name="name"
-          placeholder="Maria da Silva"
-          value={form.name}
-          onChange={handleChange}
-          className={inputClassName}
-          disabled={loading}
-          required
-        />
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className={formSectionClassName}>
+        <div>
+          <p className={formSectionTitleClassName}>Conta</p>
+          <p className={`${authHintTextClassName} mt-2`}>
+            Comece com seus dados principais para liberar o acesso.
+          </p>
+        </div>
 
-      <div className="space-y-px">
-        <span className={labelClassName}>Email</span>
-        <input
-          name="email"
-          type="email"
-          placeholder="email@exemplo.com"
-          value={form.email}
-          onChange={handleChange}
-          className={inputClassName}
-          disabled={loading}
-          required
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-1">
-        <div className="space-y-px">
-          <span className={labelClassName}>CPF</span>
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label htmlFor="name" className={authLabelClassName}>
+              Nome completo
+            </label>
+            {form.name ? (
+              <span className="text-[11px] text-brand-gray-light">
+                {nameValid ? "Nome completo ok" : "Adicione nome e sobrenome"}
+              </span>
+            ) : null}
+          </div>
           <input
-            name="cpf"
-            placeholder="000.000.000-00"
-            value={form.cpf}
+            id="name"
+            name="name"
+            placeholder="Maria da Silva"
+            value={form.name}
             onChange={handleChange}
-            className={inputClassName}
+            className={authInputClassName}
             disabled={loading}
+            required
           />
         </div>
 
-        <div className="space-y-px">
-          <span className={labelClassName}>Genero</span>
-          <select
-            name="gender"
-            value={form.gender}
-            onChange={handleChange}
-            className={inputClassName}
-            disabled={loading}
-          >
-            <option value="MALE">Masculino</option>
-            <option value="FEMALE">Feminino</option>
-            <option value="OTHER">Outro</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-[64px_1fr] gap-1">
-        <div className="space-y-px">
-          <span className={labelClassName}>Pais</span>
-          <select
-            name="phoneCountry"
-            value={form.phoneCountry}
-            onChange={handleChange}
-            className={inputClassName}
-            disabled={loading}
-          >
-            <option value="BR">BR</option>
-            <option value="US">US</option>
-            <option value="OTHER">OUT</option>
-          </select>
-        </div>
-
-        <div className="space-y-px">
-          <span className={labelClassName}>Telefone</span>
-          <div className="flex">
-            {(form.phoneCountry === "BR" || form.phoneCountry === "US") && (
-              <span className="rounded-l-md border border-r-0 border-neutral-300 bg-neutral-100 px-2 py-1 text-[12px] text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
-                {form.phoneCountry === "BR" ? "+55" : "+1"}
-              </span>
-            )}
-
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label htmlFor="email" className={authLabelClassName}>
+              E-mail
+            </label>
             <input
-              name="phone"
-              placeholder={
-                form.phoneCountry === "OTHER"
-                  ? "+351912345678"
-                  : "Somente numeros"
-              }
-              value={form.phone}
+              id="email"
+              name="email"
+              type="email"
+              placeholder="email@exemplo.com"
+              value={form.email}
               onChange={handleChange}
-              className={`${inputClassName} ${
-                form.phoneCountry !== "OTHER" ? "rounded-l-none" : ""
-              }`}
-              disabled={loading}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-px">
-        <span className={labelClassName}>
-          Data de nascimento <span className="text-neutral-400">(opcional)</span>
-        </span>
-        <input
-          name="birthDate"
-          type="date"
-          value={form.birthDate}
-          onChange={handleChange}
-          className={inputClassName}
-          disabled={loading}
-        />
-      </div>
-
-      <div className="space-y-px">
-        <span className={labelClassName}>
-          CEP <span className="text-neutral-400">(opcional)</span>
-        </span>
-        <input
-          name="zipCode"
-          placeholder="00000-000"
-          value={form.zipCode}
-          onChange={handleChange}
-          onBlur={fetchCep}
-          className={inputClassName}
-          disabled={loading}
-        />
-
-        {cepLoading ? (
-          <div className="flex items-center gap-1 text-[10px] text-neutral-500 dark:text-neutral-400">
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
-            Buscando CEP...
-          </div>
-        ) : null}
-
-        {cepError ? <p className="text-[10px] text-red-600">{cepError}</p> : null}
-      </div>
-
-      {cepReady ? (
-        <>
-          <div className="space-y-px">
-            <span className={labelClassName}>Rua</span>
-            <input
-              name="street"
-              value={form.street}
-              onChange={handleChange}
-              className={inputClassName}
+              className={authInputClassName}
               disabled={loading}
               required
             />
           </div>
 
-          <div className="space-y-px">
-            <span className={labelClassName}>Bairro</span>
-            <input value={form.district} readOnly className={readonlyInputClassName} />
+          <div className="space-y-1.5">
+            <label htmlFor="birthDate" className={authLabelClassName}>
+              Data de nascimento
+            </label>
+            <input
+              id="birthDate"
+              name="birthDate"
+              type="date"
+              value={form.birthDate}
+              onChange={handleChange}
+              className={authInputClassName}
+              disabled={loading}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label htmlFor="password" className={authLabelClassName}>
+              Senha
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Minimo de 8 caracteres"
+              value={form.password}
+              onChange={handleChange}
+              className={authInputClassName}
+              disabled={loading}
+              required
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-1">
-            <div className="space-y-px">
-              <span className={labelClassName}>Cidade</span>
-              <input value={form.city} readOnly className={readonlyInputClassName} />
-            </div>
+          <div className="space-y-1.5">
+            <label htmlFor="confirm" className={authLabelClassName}>
+              Confirmar senha
+            </label>
+            <input
+              id="confirm"
+              name="confirm"
+              type="password"
+              placeholder="Repita sua senha"
+              value={form.confirm}
+              onChange={handleChange}
+              className={authInputClassName}
+              disabled={loading}
+              required
+            />
+          </div>
+        </div>
 
-            <div className="space-y-px">
-              <span className={labelClassName}>UF</span>
-              <input value={form.state} readOnly className={readonlyInputClassName} />
-            </div>
+        {!confirmValid && form.confirm ? (
+          <p className="text-xs text-brand-white">
+            As senhas precisam ser iguais para continuar.
+          </p>
+        ) : null}
+      </div>
+
+      <div className={formSectionClassName}>
+        <div>
+          <p className={formSectionTitleClassName}>Perfil</p>
+          <p className={`${authHintTextClassName} mt-2`}>
+            Campos opcionais para deixar o cadastro mais completo desde o inicio.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label htmlFor="cpf" className={authLabelClassName}>
+              CPF
+            </label>
+            <input
+              id="cpf"
+              name="cpf"
+              placeholder="000.000.000-00"
+              value={form.cpf}
+              onChange={handleChange}
+              className={authInputClassName}
+              disabled={loading}
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-1">
-            <div className="space-y-px">
-              <span className={labelClassName}>Numero</span>
+          <div className="space-y-1.5">
+            <label htmlFor="gender" className={authLabelClassName}>
+              Genero
+            </label>
+            <select
+              id="gender"
+              name="gender"
+              value={form.gender}
+              onChange={handleChange}
+              className={authInputClassName}
+              disabled={loading}
+            >
+              <option value="MALE">Masculino</option>
+              <option value="FEMALE">Feminino</option>
+              <option value="OTHER">Outro</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className={formSectionClassName}>
+        <div>
+          <p className={formSectionTitleClassName}>Contato e endereco</p>
+          <p className={`${authHintTextClassName} mt-2`}>
+            O telefone e o CEP ajudam a equipe a acelerar atendimento e cobranca.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-[5.5rem_minmax(0,1fr)]">
+          <div className="space-y-1.5">
+            <label htmlFor="phoneCountry" className={authLabelClassName}>
+              Pais
+            </label>
+            <select
+              id="phoneCountry"
+              name="phoneCountry"
+              value={form.phoneCountry}
+              onChange={handleChange}
+              className={authInputClassName}
+              disabled={loading}
+            >
+              <option value="BR">BR</option>
+              <option value="US">US</option>
+              <option value="OTHER">OUT</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="phone" className={authLabelClassName}>
+              Telefone
+            </label>
+            <div className="flex">
+              {(form.phoneCountry === "BR" || form.phoneCountry === "US") && (
+                <span className="rounded-l-[1.1rem] border border-r-0 border-white/10 bg-white/[0.06] px-4 py-3.5 text-sm text-brand-gray-light">
+                  {form.phoneCountry === "BR" ? "+55" : "+1"}
+                </span>
+              )}
+
               <input
-                name="number"
-                placeholder="123"
-                value={form.number}
+                id="phone"
+                name="phone"
+                placeholder={
+                  form.phoneCountry === "OTHER"
+                    ? "+351912345678"
+                    : "Somente numeros"
+                }
+                value={form.phone}
                 onChange={handleChange}
-                className={inputClassName}
+                className={`${authInputClassName} ${
+                  form.phoneCountry !== "OTHER" ? "rounded-l-none" : ""
+                }`}
+                disabled={loading}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="zipCode" className={authLabelClassName}>
+            CEP
+          </label>
+          <input
+            id="zipCode"
+            name="zipCode"
+            placeholder="00000-000"
+            value={form.zipCode}
+            onChange={handleChange}
+            onBlur={fetchCep}
+            className={authInputClassName}
+            disabled={loading}
+          />
+
+          {cepLoading ? (
+            <div className="flex items-center gap-2 text-xs text-brand-gray-light">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              Buscando CEP...
+            </div>
+          ) : null}
+
+          {cepError ? (
+            <p className="text-xs text-brand-white">{cepError}</p>
+          ) : null}
+        </div>
+
+        {cepReady ? (
+          <div className="grid gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="street" className={authLabelClassName}>
+                Rua
+              </label>
+              <input
+                id="street"
+                name="street"
+                value={form.street}
+                onChange={handleChange}
+                className={authInputClassName}
                 disabled={loading}
                 required
               />
             </div>
 
-            <div className="space-y-px">
-              <span className={labelClassName}>Complemento</span>
+            <div className="space-y-1.5">
+              <label htmlFor="district" className={authLabelClassName}>
+                Bairro
+              </label>
               <input
-                name="complement"
-                placeholder="Apto, casa"
-                value={form.complement}
-                onChange={handleChange}
-                className={inputClassName}
-                disabled={loading}
+                id="district"
+                value={form.district}
+                readOnly
+                className={authReadonlyInputClassName}
               />
             </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label htmlFor="city" className={authLabelClassName}>
+                  Cidade
+                </label>
+                <input
+                  id="city"
+                  value={form.city}
+                  readOnly
+                  className={authReadonlyInputClassName}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="state" className={authLabelClassName}>
+                  UF
+                </label>
+                <input
+                  id="state"
+                  value={form.state}
+                  readOnly
+                  className={authReadonlyInputClassName}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label htmlFor="number" className={authLabelClassName}>
+                  Numero
+                </label>
+                <input
+                  id="number"
+                  name="number"
+                  placeholder="123"
+                  value={form.number}
+                  onChange={handleChange}
+                  className={authInputClassName}
+                  disabled={loading}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="complement" className={authLabelClassName}>
+                  Complemento
+                </label>
+                <input
+                  id="complement"
+                  name="complement"
+                  placeholder="Apto, casa, bloco"
+                  value={form.complement}
+                  onChange={handleChange}
+                  className={authInputClassName}
+                  disabled={loading}
+                />
+              </div>
+            </div>
           </div>
-        </>
-      ) : null}
-
-      <div className="space-y-px">
-        <span className={labelClassName}>Senha</span>
-        <input
-          name="password"
-          type="password"
-          placeholder="Minimo de 8 caracteres"
-          value={form.password}
-          onChange={handleChange}
-          className={inputClassName}
-          disabled={loading}
-          required
-        />
+        ) : null}
       </div>
 
-      <div className="space-y-px">
-        <span className={labelClassName}>Confirmar senha</span>
-        <input
-          name="confirm"
-          type="password"
-          placeholder="Repita sua senha"
-          value={form.confirm}
-          onChange={handleChange}
-          className={inputClassName}
-          disabled={loading}
-          required
-        />
-      </div>
+      {error ? <div className={authErrorMessageClassName}>{error}</div> : null}
 
-      {error ? <p className="text-[10px] text-red-600">{error}</p> : null}
-
-      <div className="mt-2 space-y-1">
+      <div className="space-y-3 rounded-[1.45rem] border border-white/10 bg-white/[0.03] p-4 sm:p-5">
         <button
           type="submit"
           disabled={loading || !formValid}
-          className="w-full rounded-md bg-blue-600 py-1.5 text-sm text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+          className={authPrimaryButtonClassName}
         >
-          {loading ? "Criando..." : "Criar conta"}
+          {loading ? "Criando conta..." : "Criar conta"}
         </button>
 
-        <p className="text-center text-[10px] text-neutral-500 dark:text-neutral-400">
+        <p className={`${authHintTextClassName} text-center`}>
           Ja tem conta?{" "}
-          <Link href="/login" className="text-blue-600 hover:underline">
+          <Link href="/login" className={authFooterLinkClassName}>
             Entrar
           </Link>
         </p>

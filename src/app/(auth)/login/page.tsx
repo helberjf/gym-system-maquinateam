@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { auth } from "@/auth";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { AuthShowcaseShell } from "@/components/auth/AuthShowcaseShell";
 
 export const metadata: Metadata = {
   title: "Login",
@@ -26,26 +25,21 @@ export default async function LoginPage() {
   );
 
   return (
-    <section className="mx-auto mt-2 w-full max-w-sm px-2 sm:mt-4">
-      <Link
-        href="/"
-        className="mb-1 inline-flex items-center gap-2 text-[13px] font-medium text-neutral-300 transition-colors hover:text-white"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Voltar para home
-      </Link>
-
-      <div className="rounded-lg border bg-white px-4 py-4 shadow-sm dark:bg-neutral-900">
-        <h1 className="mb-1 text-center text-lg font-bold text-neutral-900 dark:text-white">
-          Acesse sua conta
-        </h1>
-
-        <p className="mb-3 text-center text-[12.5px] text-neutral-500 dark:text-neutral-400">
-          Entre com seu e-mail e senha para continuar.
-        </p>
-
+    <AuthShowcaseShell
+      eyebrow="Acesso seguro"
+      title="Entre para acompanhar sua evolucao"
+      description="Use seu e-mail e senha para acessar pagamentos, treinos atribuidos, comunicados da academia e o fluxo completo do aluno."
+      supportTitle="Painel, planos e atendimento em um so lugar"
+      supportDescription="A experiencia foi pensada para o aluno entrar rapido, acompanhar a rotina e fechar o que precisar sem perder o clima premium da Maquina Team."
+      highlights={[
+        "Pagamentos e renovacoes no mesmo painel do aluno.",
+        "Treinos, avisos e suporte comercial sempre por perto.",
+        "Fluxo alinhado ao visual do projeto de referencia e ao tema da academia.",
+      ]}
+    >
+      <div className="mx-auto max-w-xl">
         <LoginForm googleEnabled={googleEnabled} />
       </div>
-    </section>
+    </AuthShowcaseShell>
   );
 }

@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { auth } from "@/auth";
 import { RegisterForm } from "@/components/auth/RegisterForm";
+import { AuthShowcaseShell } from "@/components/auth/AuthShowcaseShell";
 
 export const metadata: Metadata = {
   title: "Cadastro",
@@ -22,26 +21,21 @@ export default async function CadastroPage() {
   }
 
   return (
-    <section className="mx-auto mt-2 w-full max-w-sm px-2 sm:mt-4">
-      <Link
-        href="/"
-        className="mb-1 inline-flex items-center gap-2 text-[13px] font-medium text-neutral-300 transition-colors hover:text-white"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Voltar para home
-      </Link>
-
-      <div className="rounded-lg border bg-white px-4 py-4 shadow-sm dark:bg-neutral-900">
-        <h1 className="mb-1 text-center text-lg font-bold text-neutral-900 dark:text-white">
-          Criar conta
-        </h1>
-
-        <p className="mb-3 text-center text-[12.5px] text-neutral-500 dark:text-neutral-400">
-          Preencha os campos para se registrar.
-        </p>
-
+    <AuthShowcaseShell
+      eyebrow="Novo acesso"
+      title="Crie sua conta e entre no sistema"
+      description="Cadastro pensado para funcionar bem no celular, com identidade visual mais forte e um fluxo claro para liberar planos, pagamentos e comunicados."
+      supportTitle="Comece com a conta pronta para a rotina da academia"
+      supportDescription="Depois do cadastro, o aluno ja pode confirmar o e-mail, entrar no painel e seguir para planos, checkout e acompanhamento da evolucao."
+      highlights={[
+        "Formulario mais organizado para preencher no mobile sem aperto.",
+        "Campos agrupados por contexto para reduzir friccao no cadastro.",
+        "Visual alinhado ao restante do projeto, sem bordas fracas nem CTA apagado.",
+      ]}
+    >
+      <div className="mx-auto max-w-2xl">
         <RegisterForm />
       </div>
-    </section>
+    </AuthShowcaseShell>
   );
 }
