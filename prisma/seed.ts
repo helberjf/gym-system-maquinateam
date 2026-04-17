@@ -181,7 +181,7 @@ async function main() {
   const adminUser = await prisma.user.create({
     data: {
       name: "Administrador Maquina Team",
-      email: "Maquinateam.adm@gmail.com",
+      email: "maquinateam.adm@gmail.com",
       passwordHash: adminHash,
       emailVerified: new Date(),
       role: "ADMIN",
