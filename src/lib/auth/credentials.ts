@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { AUTH_ERROR_CODES } from "@/lib/auth/error-codes";
 import { verifyPassword } from "@/lib/auth/password";
 import { loginSchema } from "@/lib/validators/auth";
+import crypto from "crypto";
 import { TooManyRequestsError } from "@/lib/errors";
-import { enforceRateLimit, loginLimiter } from "@/lib/rate-limit";
+import { enforceRateLimit, loginEmailLimiter, loginLimiter } from "@/lib/rate-limit";
 
 export class InvalidCredentialsError extends CredentialsSignin {
   code = AUTH_ERROR_CODES.invalidCredentials;
@@ -37,11 +38,23 @@ export async function authorizeCredentials(
     throw new InvalidCredentialsError();
   }
 
+  const email = parsed.data.email.toLowerCase();
+  const emailIdentifier = crypto
+    .createHash("sha256")
+    .update(`login-email|${email}`)
+    .digest("hex");
+
   try {
     await enforceRateLimit({
       request,
       limiter: loginLimiter,
-      keyParts: [parsed.data.email],
+      keyParts: [email],
+    });
+
+    await enforceRateLimit({
+      request,
+      limiter: loginEmailLimiter,
+      identifier: emailIdentifier,
     });
   } catch (error) {
     if (error instanceof TooManyRequestsError) {
@@ -50,8 +63,6 @@ export async function authorizeCredentials(
 
     throw error;
   }
-
-  const email = parsed.data.email.toLowerCase();
   const user = await prisma.user.findUnique({
     where: { email },
     include: {

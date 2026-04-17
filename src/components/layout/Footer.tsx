@@ -54,6 +54,9 @@ export function Footer() {
               <Link href="/politica-de-privacidade" className="block hover:text-white">
                 Politica de Privacidade
               </Link>
+              <Link href="/termos" className="block hover:text-white">
+                Termos de Uso
+              </Link>
             </div>
           </div>
 
@@ -112,9 +115,14 @@ export function Footer() {
             <p>
               {BRAND.address.full} - {BRAND.hours.label}
             </p>
-            <Link href="/politica-de-privacidade" className="hover:text-white">
-              Politica de Privacidade
-            </Link>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 md:justify-end">
+              <Link href="/politica-de-privacidade" className="hover:text-white">
+                Politica de Privacidade
+              </Link>
+              <Link href="/termos" className="hover:text-white">
+                Termos de Uso
+              </Link>
+            </div>
           </div>
         </div>
       </div>

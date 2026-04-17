@@ -357,6 +357,13 @@ export const loginLimiter = createRateLimitProfile({
   message: "Muitas tentativas de login. Aguarde alguns minutos para tentar novamente.",
 });
 
+export const loginEmailLimiter = createRateLimitProfile({
+  key: "login-email",
+  limit: 10,
+  windowMs: 15 * 60 * 1_000,
+  message: "Conta temporariamente bloqueada por tentativas consecutivas. Aguarde alguns minutos.",
+});
+
 export const registerLimiter = createRateLimitProfile({
   ...authLimiter,
   key: "register",

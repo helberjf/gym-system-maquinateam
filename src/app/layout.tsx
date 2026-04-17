@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, Manrope } from "next/font/google";
 import "./globals.css";
 import { BRAND } from "@/lib/constants/brand";
@@ -71,6 +71,17 @@ export const metadata: Metadata = {
     description: BRAND.slogan,
     images: ["/images/fachada.webp"],
   },
+  icons: {
+    icon: "/images/logo.jpg",
+    shortcut: "/images/logo.jpg",
+    apple: "/images/logo.jpg",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0A0A0A",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
