@@ -274,21 +274,19 @@ export function RegisterForm() {
     }
   }
 
-  const baseInputClassName =
-    "w-full rounded-md border px-2 py-1 text-[12px] disabled:opacity-60";
   const inputClassName =
-    `${baseInputClassName} border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100`;
-  const readonlyInputClassName =
-    `${inputClassName} cursor-not-allowed bg-neutral-100 dark:bg-neutral-900`;
-  const labelClassName = "text-[10px] text-neutral-600 dark:text-neutral-400";
+    "w-full rounded-lg border border-brand-gray-mid bg-brand-black px-3 py-2 text-sm text-white outline-none transition placeholder:text-brand-gray-light/50 focus:border-brand-red disabled:opacity-60";
+  const readonlyInputClassName = `${inputClassName} cursor-not-allowed bg-brand-gray-mid/40`;
+  const labelClassName =
+    "text-[11px] font-medium uppercase tracking-[0.14em] text-brand-gray-light";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-1">
-      <div className="space-y-px">
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="space-y-1">
         <span className={labelClassName}>
           Nome completo{" "}
           {form.name ? (
-            <span className={nameValid ? "text-green-600" : "text-red-600"}>
+            <span className={nameValid ? "text-emerald-400" : "text-brand-red"}>
               {nameValid ? "OK" : "X"}
             </span>
           ) : null}
@@ -304,8 +302,8 @@ export function RegisterForm() {
         />
       </div>
 
-      <div className="space-y-px">
-        <span className={labelClassName}>Email</span>
+      <div className="space-y-1">
+        <span className={labelClassName}>E-mail</span>
         <input
           name="email"
           type="email"
@@ -318,8 +316,8 @@ export function RegisterForm() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-1">
-        <div className="space-y-px">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
           <span className={labelClassName}>CPF</span>
           <input
             name="cpf"
@@ -331,7 +329,7 @@ export function RegisterForm() {
           />
         </div>
 
-        <div className="space-y-px">
+        <div className="space-y-1">
           <span className={labelClassName}>Genero</span>
           <select
             name="gender"
@@ -347,8 +345,8 @@ export function RegisterForm() {
         </div>
       </div>
 
-      <div className="grid grid-cols-[64px_1fr] gap-1">
-        <div className="space-y-px">
+      <div className="grid grid-cols-[72px_1fr] gap-3">
+        <div className="space-y-1">
           <span className={labelClassName}>Pais</span>
           <select
             name="phoneCountry"
@@ -363,11 +361,11 @@ export function RegisterForm() {
           </select>
         </div>
 
-        <div className="space-y-px">
+        <div className="space-y-1">
           <span className={labelClassName}>Telefone</span>
           <div className="flex">
             {(form.phoneCountry === "BR" || form.phoneCountry === "US") && (
-              <span className="rounded-l-md border border-r-0 border-neutral-300 bg-neutral-100 px-2 py-1 text-[12px] text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
+              <span className="rounded-l-lg border border-r-0 border-brand-gray-mid bg-brand-gray-mid/40 px-3 py-2 text-sm text-brand-gray-light">
                 {form.phoneCountry === "BR" ? "+55" : "+1"}
               </span>
             )}
@@ -390,9 +388,9 @@ export function RegisterForm() {
         </div>
       </div>
 
-      <div className="space-y-px">
+      <div className="space-y-1">
         <span className={labelClassName}>
-          Data de nascimento <span className="text-neutral-400">(opcional)</span>
+          Nascimento <span className="normal-case text-brand-gray-light/60">(opcional)</span>
         </span>
         <input
           name="birthDate"
@@ -404,9 +402,9 @@ export function RegisterForm() {
         />
       </div>
 
-      <div className="space-y-px">
+      <div className="space-y-1">
         <span className={labelClassName}>
-          CEP <span className="text-neutral-400">(opcional)</span>
+          CEP <span className="normal-case text-brand-gray-light/60">(opcional)</span>
         </span>
         <input
           name="zipCode"
@@ -419,18 +417,18 @@ export function RegisterForm() {
         />
 
         {cepLoading ? (
-          <div className="flex items-center gap-1 text-[10px] text-neutral-500 dark:text-neutral-400">
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
+          <div className="flex items-center gap-2 text-xs text-brand-gray-light">
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-brand-gray-light border-t-transparent" />
             Buscando CEP...
           </div>
         ) : null}
 
-        {cepError ? <p className="text-[10px] text-red-600">{cepError}</p> : null}
+        {cepError ? <p className="text-xs text-brand-red">{cepError}</p> : null}
       </div>
 
       {cepReady ? (
         <>
-          <div className="space-y-px">
+          <div className="space-y-1">
             <span className={labelClassName}>Rua</span>
             <input
               name="street"
@@ -442,25 +440,25 @@ export function RegisterForm() {
             />
           </div>
 
-          <div className="space-y-px">
+          <div className="space-y-1">
             <span className={labelClassName}>Bairro</span>
             <input value={form.district} readOnly className={readonlyInputClassName} />
           </div>
 
-          <div className="grid grid-cols-2 gap-1">
-            <div className="space-y-px">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
               <span className={labelClassName}>Cidade</span>
               <input value={form.city} readOnly className={readonlyInputClassName} />
             </div>
 
-            <div className="space-y-px">
+            <div className="space-y-1">
               <span className={labelClassName}>UF</span>
               <input value={form.state} readOnly className={readonlyInputClassName} />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-1">
-            <div className="space-y-px">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
               <span className={labelClassName}>Numero</span>
               <input
                 name="number"
@@ -473,7 +471,7 @@ export function RegisterForm() {
               />
             </div>
 
-            <div className="space-y-px">
+            <div className="space-y-1">
               <span className={labelClassName}>Complemento</span>
               <input
                 name="complement"
@@ -488,48 +486,68 @@ export function RegisterForm() {
         </>
       ) : null}
 
-      <div className="space-y-px">
-        <span className={labelClassName}>Senha</span>
-        <input
-          name="password"
-          type="password"
-          placeholder="Minimo de 8 caracteres"
-          value={form.password}
-          onChange={handleChange}
-          className={inputClassName}
-          disabled={loading}
-          required
-        />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="space-y-1">
+          <span className={labelClassName}>Senha</span>
+          <input
+            name="password"
+            type="password"
+            placeholder="Minimo de 8 caracteres"
+            value={form.password}
+            onChange={handleChange}
+            className={inputClassName}
+            disabled={loading}
+            required
+          />
+        </div>
+
+        <div className="space-y-1">
+          <span className={labelClassName}>
+            Confirmar senha{" "}
+            {form.confirm ? (
+              <span className={confirmValid ? "text-emerald-400" : "text-brand-red"}>
+                {confirmValid ? "OK" : "X"}
+              </span>
+            ) : null}
+          </span>
+          <input
+            name="confirm"
+            type="password"
+            placeholder="Repita sua senha"
+            value={form.confirm}
+            onChange={handleChange}
+            className={inputClassName}
+            disabled={loading}
+            required
+          />
+        </div>
       </div>
 
-      <div className="space-y-px">
-        <span className={labelClassName}>Confirmar senha</span>
-        <input
-          name="confirm"
-          type="password"
-          placeholder="Repita sua senha"
-          value={form.confirm}
-          onChange={handleChange}
-          className={inputClassName}
-          disabled={loading}
-          required
-        />
-      </div>
+      {error ? (
+        <div className="rounded-xl border border-brand-red/40 bg-brand-red/10 px-4 py-3 text-sm text-brand-white">
+          {error}
+        </div>
+      ) : null}
 
-      {error ? <p className="text-[10px] text-red-600">{error}</p> : null}
-
-      <div className="mt-2 space-y-1">
+      <div className="space-y-3 pt-2">
         <button
           type="submit"
           disabled={loading || !formValid}
-          className="w-full rounded-md bg-blue-600 py-1.5 text-sm text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+          className="w-full rounded-xl bg-brand-red px-4 py-3 text-sm font-semibold text-black transition hover:bg-brand-red-dark disabled:opacity-50"
         >
-          {loading ? "Criando..." : "Criar conta"}
+          {loading ? (
+            <span className="inline-flex items-center justify-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/40 border-t-black" />
+              Criando...
+            </span>
+          ) : (
+            "Criar conta"
+          )}
         </button>
 
-        <p className="text-center text-[10px] text-neutral-500 dark:text-neutral-400">
+        <p className="text-center text-sm text-brand-gray-light">
           Ja tem conta?{" "}
-          <Link href="/login" className="text-blue-600 hover:underline">
+          <Link href="/login" className="font-semibold text-brand-red hover:underline">
             Entrar
           </Link>
         </p>
