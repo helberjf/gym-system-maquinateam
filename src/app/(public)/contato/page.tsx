@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
+  AtSign,
   ArrowUpRight,
-  Instagram,
   Mail,
   MapPin,
   MessageCircle,
@@ -38,7 +38,7 @@ const contactCards = [
     value: BRAND.contact.instagram,
     href: BRAND.contact.instagramUrl,
     action: "Abrir perfil",
-    icon: Instagram,
+    icon: AtSign,
     compact: false,
   },
   {
