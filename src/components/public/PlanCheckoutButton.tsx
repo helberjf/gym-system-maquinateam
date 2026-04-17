@@ -6,6 +6,7 @@ import { PaymentMethod } from "@prisma/client";
 import { toast } from "sonner";
 import { usePublicViewer } from "@/components/public/usePublicViewer";
 import { Button } from "@/components/ui/Button";
+import { BRAND } from "@/lib/constants/brand";
 
 type PlanCheckoutButtonProps = {
   planId: string;
@@ -13,6 +14,9 @@ type PlanCheckoutButtonProps = {
   className?: string;
   isAuthenticated?: boolean;
   tone?: "dark" | "light";
+  mode?: "checkout" | "contact";
+  contactHref?: string;
+  contactLabel?: string;
 };
 
 export function PlanCheckoutButton({
@@ -21,6 +25,9 @@ export function PlanCheckoutButton({
   className,
   isAuthenticated,
   tone = "dark",
+  mode = "checkout",
+  contactHref = BRAND.contact.whatsappUrl,
+  contactLabel = "Consultar plano",
 }: PlanCheckoutButtonProps) {
   const viewer = usePublicViewer({
     isAuthenticated,
@@ -45,6 +52,31 @@ export function PlanCheckoutButton({
           idle:
             "border-brand-gray-mid bg-brand-black/30 text-brand-gray-light hover:border-white/25",
         };
+  const primaryToneClasses =
+    tone === "light"
+      ? "bg-black text-white border-transparent hover:bg-black/90"
+      : "bg-brand-red text-black border-transparent hover:bg-brand-red-dark";
+
+  if (mode === "contact") {
+    return (
+      <Link
+        href={contactHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={[
+          "inline-flex items-center justify-center gap-2 rounded-lg border font-medium",
+          "transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red",
+          "px-4 py-2 text-sm",
+          primaryToneClasses,
+          className ?? "",
+        ]
+          .join(" ")
+          .trim()}
+      >
+        {contactLabel}
+      </Link>
+    );
+  }
 
   async function handleCheckout() {
     setLoading(true);
@@ -83,10 +115,6 @@ export function PlanCheckoutButton({
   }
 
   if (!resolvedAuthentication) {
-    const toneClasses =
-      tone === "light"
-        ? "bg-black text-white border-transparent hover:bg-black/90"
-        : "bg-brand-red text-black border-transparent hover:bg-brand-red-dark";
     return (
       <Link
         href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}
@@ -94,7 +122,7 @@ export function PlanCheckoutButton({
           "inline-flex items-center justify-center gap-2 rounded-lg border font-medium",
           "transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red",
           "px-4 py-2 text-sm",
-          toneClasses,
+          primaryToneClasses,
           className ?? "",
         ]
           .join(" ")

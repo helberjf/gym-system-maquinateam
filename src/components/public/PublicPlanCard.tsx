@@ -15,6 +15,7 @@ export function PublicPlanCard({
   plan,
   callbackUrl,
 }: PublicPlanCardProps) {
+  const isFallback = plan.source === "fallback";
   const recurringLabel = getBillingIntervalLabel(plan.billingIntervalMonths);
   const durationLabel = formatMonthsLabel(
     plan.durationMonths ?? plan.billingIntervalMonths,
@@ -100,10 +101,18 @@ export function PublicPlanCard({
         ))}
       </ul>
 
+      {isFallback ? (
+        <p className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-xs uppercase tracking-[0.14em] text-brand-gray-light">
+          Catalogo temporario enquanto o checkout online e sincronizado.
+        </p>
+      ) : null}
+
       <div className="mt-8">
         <PlanCheckoutButton
           planId={plan.id}
           callbackUrl={callbackUrl}
+          mode={isFallback ? "contact" : "checkout"}
+          contactLabel="Consultar plano"
           tone="dark"
           className="w-full shadow-[0_18px_40px_rgba(0,0,0,0.28)]"
         />

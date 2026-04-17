@@ -33,6 +33,7 @@ function RecommendedFullPlanCard({
 }: {
   plan: PublicPlanCatalogItem;
 }) {
+  const isFallback = plan.source === "fallback";
   const isRecommended = plan.isRecommended;
 
   return (
@@ -93,10 +94,18 @@ function RecommendedFullPlanCard({
         </p>
       ) : null}
 
+      {isFallback ? (
+        <p className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-xs uppercase tracking-[0.14em] text-brand-gray-light">
+          Catalogo temporario enquanto o checkout online e sincronizado.
+        </p>
+      ) : null}
+
       <div className="mt-8">
         <PlanCheckoutButton
           planId={plan.id}
           callbackUrl="/planos"
+          mode={isFallback ? "contact" : "checkout"}
+          contactLabel="Consultar plano"
           tone="dark"
           className="w-full shadow-[0_18px_40px_rgba(0,0,0,0.28)]"
         />
@@ -114,6 +123,7 @@ function RecommendedFullSection({
     return null;
   }
 
+  const isFallbackCatalog = plans.some((plan) => plan.source === "fallback");
   const recommended = plans.find((plan) => plan.isRecommended) ?? plans[0];
   const orderedPlans = [
     recommended,
@@ -132,9 +142,9 @@ function RecommendedFullSection({
               Plano FULL para quem quer viver a academia
             </h2>
             <p className="mt-4 max-w-xl text-sm leading-7 text-brand-gray-light sm:text-base">
-              O FULL concentra a melhor experiencia da grade publica: acesso
-              livre, liberdade de agenda e checkout online com Pix pela
-              AbacatePay ou cartao no Mercado Pago.
+              {isFallbackCatalog
+                ? "O FULL continua em destaque mesmo durante a sincronizacao do catalogo online: acesso livre, liberdade de agenda e atendimento rapido da equipe comercial para fechar o plano."
+                : "O FULL concentra a melhor experiencia da grade publica: acesso livre, liberdade de agenda e checkout online com Pix pela AbacatePay ou cartao no Mercado Pago."}
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -151,8 +161,8 @@ function RecommendedFullSection({
                 },
                 {
                   icon: BadgeCheck,
-                  label: "Checkout",
-                  value: "Pix ou cartao",
+                  label: isFallbackCatalog ? "Atendimento" : "Checkout",
+                  value: isFallbackCatalog ? "Equipe comercial" : "Pix ou cartao",
                 },
               ].map((item) => (
                 <div
@@ -178,9 +188,9 @@ function RecommendedFullSection({
                 </p>
               </div>
               <p className="mt-3 text-sm leading-7 text-brand-gray-light">
-                Ele entrega a rotina mais livre da academia e centraliza o
-                melhor argumento de conversao para quem ja quer treinar serio
-                desde o primeiro acesso.
+                {isFallbackCatalog
+                  ? "Ele continua sendo o melhor argumento para quem quer treinar serio desde o primeiro acesso, mesmo enquanto a contratacao online passa pela sincronizacao."
+                  : "Ele entrega a rotina mais livre da academia e centraliza o melhor argumento de conversao para quem ja quer treinar serio desde o primeiro acesso."}
               </p>
             </div>
           </div>
@@ -229,6 +239,9 @@ function PlanPeriodSection({
 
 export default async function PlanosPage() {
   const sections = await getPublicPlanSections();
+  const hasFallbackPlans = sections.some((section) =>
+    section.plans.some((plan) => plan.source === "fallback"),
+  );
 
   const fullPlans = sections.flatMap((section) =>
     section.plans.filter((plan) => plan.isFull),
@@ -294,6 +307,33 @@ export default async function PlanosPage() {
           description="Planos claros, diretos e com checkout online. Escolha a frequencia e o periodo que encaixam na sua rotina."
           align="center"
         />
+
+        {hasFallbackPlans ? (
+          <section className="mx-auto mt-8 max-w-4xl rounded-[2rem] border border-white/10 bg-white/[0.04] px-5 py-5 text-center sm:px-6">
+            <p className="text-xs uppercase tracking-[0.28em] text-brand-gray-light">
+              Catalogo temporario
+            </p>
+            <p className="mt-3 text-sm leading-7 text-brand-white sm:text-base">
+              Os valores abaixo continuam visiveis enquanto o catalogo online e
+              sincronizado novamente. Se quiser fechar agora, a equipe comercial
+              atende rapido pelo WhatsApp.
+            </p>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <Button asChild className="w-full sm:w-auto">
+                <a
+                  href={BRAND.contact.whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Falar com a equipe
+                </a>
+              </Button>
+              <Button asChild variant="secondary" className="w-full sm:w-auto">
+                <Link href="/contato">Ver contato completo</Link>
+              </Button>
+            </div>
+          </section>
+        ) : null}
 
         <RecommendedFullSection
           plans={fullPlans}
