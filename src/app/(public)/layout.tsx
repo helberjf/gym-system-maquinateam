@@ -1,6 +1,7 @@
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { WhatsAppButton } from '@/components/public/WhatsAppButton';
+import { CookieConsent } from '@/components/public/CookieConsent';
 
 export default function PublicLayout({
   children,
@@ -13,6 +14,7 @@ export default function PublicLayout({
       <main className="flex-1 overflow-x-clip pt-16 sm:pt-18">{children}</main>
       <Footer />
       <WhatsAppButton />
+      <CookieConsent />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ZodError, type ZodIssue } from "zod";
+import { captureException } from "@/lib/observability/capture";
 
 type ErrorDetails =
   | Record<string, unknown>
@@ -257,8 +258,12 @@ export function handleRouteError(
     headers?: HeadersInit;
   },
 ) {
-  if (!(error instanceof AppError)) {
-    console.error(context?.source ?? "route error", error);
+  const isAppError = error instanceof AppError;
+  const shouldCapture =
+    !isAppError || (isAppError && error.statusCode >= 500);
+
+  if (shouldCapture) {
+    captureException(error, { source: context?.source ?? "route_error" });
   }
 
   return errorResponse(error, {

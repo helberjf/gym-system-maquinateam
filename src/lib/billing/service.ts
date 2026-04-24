@@ -1960,6 +1960,50 @@ export async function getStudentFinancialSnapshot(viewer: ViewerContext) {
   };
 }
 
+export async function assertStudentMayAttend(studentProfileId: string) {
+  const today = startOfDay();
+
+  const activeSubscription = await prisma.subscription.findFirst({
+    where: {
+      studentProfileId,
+      status: {
+        in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.PAUSED],
+      },
+    },
+    select: { id: true, status: true, endDate: true },
+  });
+
+  if (!activeSubscription) {
+    throw new ConflictError(
+      "Aluno sem assinatura ativa. Regularize o plano antes de registrar a presenca.",
+    );
+  }
+
+  if (
+    activeSubscription.endDate &&
+    activeSubscription.endDate.getTime() < today.getTime()
+  ) {
+    throw new ConflictError(
+      "A assinatura do aluno esta expirada. Renove antes de registrar a presenca.",
+    );
+  }
+
+  const overduePayment = await prisma.payment.findFirst({
+    where: {
+      studentProfileId,
+      status: PaymentStatus.PENDING,
+      dueDate: { lt: today },
+    },
+    select: { id: true, dueDate: true },
+  });
+
+  if (overduePayment) {
+    throw new ConflictError(
+      "Aluno inadimplente: existe ao menos uma cobranca vencida em aberto.",
+    );
+  }
+}
+
 export async function getFinancialOverviewData(viewer: ViewerContext) {
   const where = getPaymentVisibilityWhere(viewer);
   const today = startOfDay();

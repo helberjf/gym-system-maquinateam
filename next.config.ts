@@ -26,6 +26,8 @@ function getAppHost(): string {
   }
 }
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const securityHeaders = [
   {
     key: "X-DNS-Prefetch-Control",
@@ -47,6 +49,14 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=(), payment=(self)",
   },
+  ...(isProduction
+    ? [
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=63072000; includeSubDomains; preload",
+        },
+      ]
+    : []),
   {
     key: "Content-Security-Policy",
     value: [
@@ -57,6 +67,7 @@ const securityHeaders = [
       "img-src 'self' data: blob: https:",
       "connect-src 'self' https://api.mercadopago.com https://api.abacatepay.com https://viacep.com.br https://melhorenvio.com.br https://sandbox.melhorenvio.com.br",
       "frame-src https://www.mercadopago.com https://www.mercadopago.com.br",
+      "frame-ancestors 'self'",
       "media-src 'self'",
       "object-src 'none'",
       "base-uri 'self'",

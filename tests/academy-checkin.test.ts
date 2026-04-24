@@ -17,6 +17,12 @@ const mocks = vi.hoisted(() => {
   return {
     prisma: {
       $transaction: vi.fn(),
+      subscription: {
+        findFirst: vi.fn(),
+      },
+      payment: {
+        findFirst: vi.fn(),
+      },
     },
     ensureVisibleStudent: vi.fn(),
     ensureVisibleClassSchedule: vi.fn(),
@@ -39,6 +45,11 @@ vi.mock("@/lib/audit", () => ({
   logAuditEvent: mocks.logAuditEvent,
 }));
 
+vi.mock("@/lib/academy/gamification", () => ({
+  awardPointsSafely: vi.fn(async () => undefined),
+  POINTS_PER_CHECKIN: 10,
+}));
+
 import { checkInStudent } from "@/lib/academy/service";
 
 describe("attendance smoke tests", () => {
@@ -51,6 +62,12 @@ describe("attendance smoke tests", () => {
     mocks.ensureVisibleStudent.mockResolvedValue({ id: "student-1" });
     mocks.ensureVisibleClassSchedule.mockResolvedValue({ id: "class-1" });
     mocks.tx.classEnrollment.findFirst.mockResolvedValue({ id: "enrollment-1" });
+    mocks.prisma.subscription.findFirst.mockResolvedValue({
+      id: "sub-1",
+      status: "ACTIVE",
+      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+    mocks.prisma.payment.findFirst.mockResolvedValue(null);
   });
 
   it("blocks duplicate open check-ins for the same student and class day", async () => {
@@ -67,6 +84,7 @@ describe("attendance smoke tests", () => {
           classScheduleId: "class-1",
           classDate: "2026-03-31",
           notes: "Chegou cedo",
+          overrideFinancial: false,
         },
         {
           viewer: {

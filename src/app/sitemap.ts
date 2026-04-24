@@ -35,6 +35,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "yearly",
       priority: 0.35,
     },
+    {
+      url: absoluteUrl("/termos-de-uso"),
+      changeFrequency: "yearly",
+      priority: 0.35,
+    },
   ];
 
   try {

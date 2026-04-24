@@ -39,6 +39,16 @@ vi.mock("@/lib/audit", () => ({
   logAuditEvent: vi.fn(),
 }));
 
+vi.mock("@/lib/messaging/events", () => ({
+  notifyTrainingPlanCreated: vi.fn(async () => ({ ok: true })),
+  notifyNutritionPlanCreated: vi.fn(async () => ({ ok: true })),
+  notifyClassReminder: vi.fn(async () => ({ ok: true })),
+}));
+
+vi.mock("@/lib/observability/capture", () => ({
+  captureException: vi.fn(),
+}));
+
 import { createTrainingAssignments } from "@/lib/training/service";
 
 describe("training assignment smoke tests", () => {

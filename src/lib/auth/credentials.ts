@@ -2,7 +2,7 @@ import { CredentialsSignin } from "next-auth";
 import { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AUTH_ERROR_CODES } from "@/lib/auth/error-codes";
-import { verifyPassword } from "@/lib/auth/password";
+import { hashPassword, needsRehash, verifyPassword } from "@/lib/auth/password";
 import { loginSchema } from "@/lib/validators/auth";
 import { TooManyRequestsError } from "@/lib/errors";
 import { enforceRateLimit, loginLimiter } from "@/lib/rate-limit";
@@ -85,6 +85,22 @@ export async function authorizeCredentials(
 
   if (!passwordMatches) {
     throw new InvalidCredentialsError();
+  }
+
+  if (needsRehash(user.passwordHash)) {
+    try {
+      const upgradedHash = await hashPassword(parsed.data.password);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: upgradedHash },
+      });
+    } catch (error) {
+      process.stderr.write(
+        `[auth][warn] failed to upgrade bcrypt hash for ${user.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }\n`,
+      );
+    }
   }
 
   if (!user.emailVerified) {

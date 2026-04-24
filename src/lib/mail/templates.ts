@@ -43,7 +43,6 @@ export function orderConfirmationEmailTemplate({
   name,
   orderNumber,
   totalCents,
-  subtotalCents,
   discountCents,
   shippingCents,
   deliveryLabel,

@@ -253,6 +253,21 @@ vi.mock("@/lib/mail", () => ({
   sendOrderConfirmationEmail: mocks.sendOrderConfirmationEmail,
   sendOrderShippedEmail: mocks.sendOrderShippedEmail,
   sendOrderDeliveredEmail: mocks.sendOrderDeliveredEmail,
+  safeSendEmail: async <TArgs>(
+    _label: string,
+    sender: (args: TArgs) => Promise<unknown>,
+    args: TArgs,
+  ) => {
+    try {
+      await sender(args);
+      return { ok: true as const };
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  },
 }));
 
 describe("Store API routes", () => {

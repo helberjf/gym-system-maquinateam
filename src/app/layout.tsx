@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, Manrope } from "next/font/google";
 import "./globals.css";
 import { BRAND } from "@/lib/constants/brand";
 import { getSiteUrl } from "@/lib/seo";
 import { AppToaster } from "@/components/ui/AppToaster";
+import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -71,6 +72,16 @@ export const metadata: Metadata = {
     description: BRAND.slogan,
     images: ["/images/fachada.webp"],
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: BRAND.name,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#e10600",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -87,6 +98,7 @@ export default function RootLayout({
       <body>
         {children}
         <AppToaster />
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );

@@ -134,59 +134,58 @@ export async function syncStoreCheckoutPayment(
     });
 
     if (shouldRestoreInventory) {
-      for (const item of currentOrder.items) {
-        const product = await tx.product.findUnique({
-          where: {
-            id: item.productId,
-          },
-          select: {
-            status: true,
-          },
-        });
+      const productIds = currentOrder.items.map((item) => item.productId);
+      const products = await tx.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, status: true },
+      });
+      const productStatusById = new Map(
+        products.map((product) => [product.id, product.status] as const),
+      );
 
-        await tx.product.update({
-          where: {
-            id: item.productId,
-          },
-          data: {
-            stockQuantity: {
-              increment: item.quantity,
-            },
-            status:
-              product?.status === ProductStatus.OUT_OF_STOCK
-                ? ProductStatus.ACTIVE
-                : undefined,
-          },
-        });
+      const outOfStockIds = currentOrder.items
+        .filter(
+          (item) =>
+            productStatusById.get(item.productId) === ProductStatus.OUT_OF_STOCK,
+        )
+        .map((item) => item.productId);
 
-        await tx.inventoryMovement.create({
-          data: {
-            productId: item.productId,
-            orderId: currentOrder.id,
-            type: "ORDER_RESTORE",
-            quantityDelta: item.quantity,
-            reason: "Estoque devolvido apos cancelamento do pagamento online",
-          },
+      if (outOfStockIds.length > 0) {
+        await tx.product.updateMany({
+          where: { id: { in: outOfStockIds } },
+          data: { status: ProductStatus.ACTIVE },
         });
       }
 
-      if (currentOrder.couponId && currentOrder.couponRedemption) {
-        await tx.coupon.update({
-          where: {
-            id: currentOrder.couponId,
-          },
-          data: {
-            usageCount: {
-              decrement: 1,
-            },
-          },
-        });
+      await Promise.all(
+        currentOrder.items.map((item) =>
+          tx.product.update({
+            where: { id: item.productId },
+            data: { stockQuantity: { increment: item.quantity } },
+          }),
+        ),
+      );
 
-        await tx.couponRedemption.delete({
-          where: {
-            id: currentOrder.couponRedemption.id,
-          },
-        });
+      await tx.inventoryMovement.createMany({
+        data: currentOrder.items.map((item) => ({
+          productId: item.productId,
+          orderId: currentOrder.id,
+          type: "ORDER_RESTORE" as const,
+          quantityDelta: item.quantity,
+          reason: "Estoque devolvido apos cancelamento do pagamento online",
+        })),
+      });
+
+      if (currentOrder.couponId && currentOrder.couponRedemption) {
+        await Promise.all([
+          tx.coupon.update({
+            where: { id: currentOrder.couponId },
+            data: { usageCount: { decrement: 1 } },
+          }),
+          tx.couponRedemption.delete({
+            where: { id: currentOrder.couponRedemption.id },
+          }),
+        ]);
       }
     }
 

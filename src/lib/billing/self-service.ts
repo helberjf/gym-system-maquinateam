@@ -192,6 +192,35 @@ export async function createPlanCheckoutSession(
   const studentProfile = user.studentProfile!;
   const paymentProvider = resolvePaymentProvider(input.paymentMethod);
 
+  const conflictingActiveSubscription = await prisma.subscription.findFirst({
+    where: {
+      studentProfileId: studentProfile.id,
+      planId: { not: planId },
+      status: {
+        in: [
+          SubscriptionStatus.ACTIVE,
+          SubscriptionStatus.PAST_DUE,
+          SubscriptionStatus.PAUSED,
+        ],
+      },
+    },
+    select: {
+      id: true,
+      status: true,
+      plan: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (conflictingActiveSubscription) {
+    throw new ConflictError(
+      `Ja existe uma assinatura ativa (${conflictingActiveSubscription.plan.name}). Cancele a assinatura atual antes de contratar outro plano.`,
+    );
+  }
+
   const existingSubscription = await prisma.subscription.findFirst({
     where: {
       studentProfileId: studentProfile.id,

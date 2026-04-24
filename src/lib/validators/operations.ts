@@ -1,4 +1,9 @@
-import { AttendanceStatus, StudentStatus } from "@prisma/client";
+import {
+  AttendanceStatus,
+  ExpenseCategory,
+  NutritionPlanStatus,
+  StudentStatus,
+} from "@prisma/client";
 import { z } from "zod";
 
 const optionalTrimmedString = z.preprocess(
@@ -359,9 +364,217 @@ export const checkInSchema = z.object({
   classScheduleId: z.string().min(1),
   classDate: optionalDateString,
   notes: optionalText,
+  overrideFinancial: z.boolean().optional().default(false),
 });
 
 export const checkOutSchema = z.object({
   attendanceId: z.string().min(1),
   notes: optionalText,
 });
+
+const optionalDateTimeString = z.preprocess(
+  (value) =>
+    typeof value === "string" && value.trim().length === 0
+      ? undefined
+      : value,
+  z
+    .string()
+    .refine((value) => !Number.isNaN(Date.parse(value)), "Informe uma data valida.")
+    .optional(),
+);
+
+const percentSchema = z
+  .number()
+  .min(0, "Use um valor entre 0 e 100.")
+  .max(100, "Use um valor entre 0 e 100.");
+
+const optionalPercent = z.preprocess(
+  (value) => {
+    if (value === null || value === undefined || value === "") {
+      return undefined;
+    }
+    if (typeof value === "string") {
+      return Number(value);
+    }
+    return value;
+  },
+  percentSchema.optional(),
+);
+
+const optionalPositiveNumber = z.preprocess(
+  (value) => {
+    if (value === null || value === undefined || value === "") {
+      return undefined;
+    }
+    if (typeof value === "string") {
+      return Number(value);
+    }
+    return value;
+  },
+  z.number().positive("Informe um valor positivo.").optional(),
+);
+
+const optionalPositiveInteger = z.preprocess(
+  (value) => {
+    if (value === null || value === undefined || value === "") {
+      return undefined;
+    }
+    if (typeof value === "string") {
+      return Number(value);
+    }
+    return value;
+  },
+  z.number().int().positive("Informe um valor positivo.").optional(),
+);
+
+export const physicalAssessmentFiltersSchema = z.object({
+  studentId: z.string().min(1, "Informe o aluno."),
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
+});
+
+const physicalAssessmentBaseSchema = z.object({
+  studentId: z.string().min(1, "Informe o aluno."),
+  assessedAt: optionalDateTimeString,
+  weightKg: optionalPositiveNumber,
+  heightCm: optionalPositiveInteger,
+  bodyFatPercent: optionalPercent,
+  muscleMassKg: optionalPositiveNumber,
+  chestCm: optionalPositiveNumber,
+  waistCm: optionalPositiveNumber,
+  hipCm: optionalPositiveNumber,
+  leftArmCm: optionalPositiveNumber,
+  rightArmCm: optionalPositiveNumber,
+  leftThighCm: optionalPositiveNumber,
+  rightThighCm: optionalPositiveNumber,
+  restingHeartRate: optionalPositiveInteger,
+  bloodPressureSystolic: optionalPositiveInteger,
+  bloodPressureDiastolic: optionalPositiveInteger,
+  notes: optionalText,
+});
+
+export const createPhysicalAssessmentSchema = physicalAssessmentBaseSchema;
+
+export const updatePhysicalAssessmentSchema =
+  physicalAssessmentBaseSchema.partial({ studentId: true }).extend({
+    id: z.string().min(1),
+  });
+
+export const qrCheckInSchema = z.object({
+  token: z.string().min(1, "Token invalido."),
+  classScheduleId: z.string().min(1, "Informe a turma."),
+  classDate: optionalDateString,
+  overrideFinancial: z.boolean().optional().default(false),
+});
+
+export const dreFiltersSchema = z.object({
+  dateFrom: optionalDateString,
+  dateTo: optionalDateString,
+});
+
+export const expenseFiltersSchema = z.object({
+  category: z.nativeEnum(ExpenseCategory).optional(),
+  dateFrom: optionalDateString,
+  dateTo: optionalDateString,
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
+});
+
+const expenseBaseSchema = z.object({
+  category: z.nativeEnum(ExpenseCategory),
+  description: z
+    .string()
+    .trim()
+    .min(1, "Descricao obrigatoria.")
+    .max(120, "Descricao muito longa."),
+  amountCents: z
+    .preprocess(
+      (value) => {
+        if (value === null || value === undefined || value === "") {
+          return undefined;
+        }
+        if (typeof value === "string") {
+          return Number(value);
+        }
+        return value;
+      },
+      z.number().int("Informe um valor inteiro.").positive("Valor deve ser positivo."),
+    ),
+  incurredAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Informe uma data valida."),
+  notes: optionalText,
+});
+
+export const createExpenseSchema = expenseBaseSchema.refine(
+  (input) => input.category !== ExpenseCategory.MP_FEE,
+  {
+    message: "Despesas da categoria MP_FEE sao automaticas.",
+    path: ["category"],
+  },
+);
+
+export const updateExpenseSchema = expenseBaseSchema
+  .partial({
+    category: true,
+    description: true,
+    amountCents: true,
+    incurredAt: true,
+  })
+  .extend({
+    id: z.string().min(1),
+  })
+  .refine((input) => input.category !== ExpenseCategory.MP_FEE, {
+    message: "Nao e possivel reclassificar como MP_FEE.",
+    path: ["category"],
+  });
+
+export const nutritionPlanFiltersSchema = z.object({
+  studentId: z.string().min(1, "Informe o aluno."),
+  status: z.nativeEnum(NutritionPlanStatus).optional(),
+  page: optionalInteger
+    .refine((value) => value === undefined || value >= 1, "Pagina invalida.")
+    .default(1),
+});
+
+const nutritionMealSchema = z.object({
+  title: z.string().trim().min(1, "Titulo da refeicao obrigatorio.").max(80),
+  time: optionalTrimmedString,
+  items: z
+    .array(z.string().trim().min(1).max(200))
+    .max(20, "Maximo de 20 itens por refeicao."),
+  notes: optionalText,
+});
+
+const nutritionContentSchema = z.object({
+  caloriesTarget: optionalInteger.refine(
+    (value) => value === undefined || value >= 0,
+    "Meta calorica invalida.",
+  ),
+  objective: optionalText,
+  meals: z.array(nutritionMealSchema).max(10, "Maximo de 10 refeicoes."),
+});
+
+const nutritionPlanBaseSchema = z.object({
+  studentId: z.string().min(1, "Informe o aluno."),
+  title: z.string().trim().min(1, "Titulo obrigatorio.").max(120),
+  description: optionalText,
+  startsAt: optionalDateString,
+  endsAt: optionalDateString,
+  status: z.nativeEnum(NutritionPlanStatus).default(NutritionPlanStatus.ACTIVE),
+  content: nutritionContentSchema,
+});
+
+export const createNutritionPlanSchema = nutritionPlanBaseSchema;
+
+export const updateNutritionPlanSchema = nutritionPlanBaseSchema
+  .partial({
+    studentId: true,
+    title: true,
+    content: true,
+  })
+  .extend({
+    id: z.string().min(1),
+  });

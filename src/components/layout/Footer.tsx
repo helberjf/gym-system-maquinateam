@@ -54,6 +54,9 @@ export function Footer() {
               <Link href="/politica-de-privacidade" className="block hover:text-white">
                 Politica de Privacidade
               </Link>
+              <Link href="/termos-de-uso" className="block hover:text-white">
+                Termos de Uso
+              </Link>
             </div>
           </div>
 
@@ -114,6 +117,10 @@ export function Footer() {
             </p>
             <Link href="/politica-de-privacidade" className="hover:text-white">
               Politica de Privacidade
+            </Link>
+            <span className="mx-1 text-brand-gray-mid">|</span>
+            <Link href="/termos-de-uso" className="hover:text-white">
+              Termos de Uso
             </Link>
           </div>
         </div>

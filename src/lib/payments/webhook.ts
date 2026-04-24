@@ -1,6 +1,8 @@
 import {
   PaymentProvider,
+  PaymentStatus,
 } from "@prisma/client";
+import { recordMercadoPagoFeeForCheckout } from "@/lib/expenses/service";
 import { prisma } from "@/lib/prisma";
 import {
   syncPlanCheckoutPayment,
@@ -20,6 +22,10 @@ type WebhookProcessInput = {
   providerObjectId: string;
 };
 
+// Idempotency contract: Mercado Pago retries the same payment id when no 2xx is
+// returned within ~22s. We deduplicate by (providerKey + final paymentStatus) via
+// the unique WebhookEvent.providerKey index. A reprocess only happens when the
+// payment transitions to a new status (e.g. PENDING -> PAID -> REFUNDED).
 export async function processMercadoPagoPaymentWebhook(
   input: WebhookProcessInput,
 ) {
@@ -136,6 +142,14 @@ export async function processMercadoPagoPaymentWebhook(
       providerObjectId: input.providerObjectId,
       paymentStatus,
       paymentMethod,
+      paymentDetails,
+    });
+  }
+
+  if (paymentStatus === PaymentStatus.PAID) {
+    await recordMercadoPagoFeeForCheckout({
+      checkoutPaymentId: checkoutPayment.id,
+      paidAt: new Date(),
       paymentDetails,
     });
   }

@@ -319,6 +319,11 @@ export async function verifyMercadoPagoWebhookRequest(request: Request) {
   const webhookSecret = process.env.MP_WEBHOOK_SECRET?.trim();
 
   if (!webhookSecret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new UnauthorizedError(
+        "MP_WEBHOOK_SECRET nao configurado em producao.",
+      );
+    }
     return;
   }
 

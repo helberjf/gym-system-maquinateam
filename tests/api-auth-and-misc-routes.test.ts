@@ -96,8 +96,10 @@ const mocks = vi.hoisted(() => {
       checkoutPaymentId: "cp-1",
       status: "PAID",
     })),
-    getOptionalSession: vi.fn(async () => null),
-    getCartSummary: vi.fn(async () => ({ cartId: null, authenticated: false, itemCount: 0 })),
+    getOptionalSession: vi.fn<
+      () => Promise<{ user: { id: string; role: string } } | null>
+    >(async () => null),
+    getCartSummary: vi.fn(async () => ({ cartId: null as string | null, authenticated: false, itemCount: 0 })),
     getStoreWishlistSummary: vi.fn(async () => ({ count: 0 })),
   };
 });

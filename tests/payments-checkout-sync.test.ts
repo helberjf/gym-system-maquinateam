@@ -20,10 +20,13 @@ const mocks = vi.hoisted(() => {
     },
     product: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
     inventoryMovement: {
       create: vi.fn(),
+      createMany: vi.fn(),
     },
     coupon: {
       update: vi.fn(),
@@ -136,8 +139,11 @@ describe("syncStoreCheckoutPayment", () => {
     mocks.tx.checkoutPayment.update.mockResolvedValue({});
     mocks.tx.order.update.mockResolvedValue({});
     mocks.tx.product.findUnique.mockResolvedValue({ status: ProductStatus.ACTIVE });
+    mocks.tx.product.findMany.mockResolvedValue([]);
     mocks.tx.product.update.mockResolvedValue({});
+    mocks.tx.product.updateMany.mockResolvedValue({ count: 0 });
     mocks.tx.inventoryMovement.create.mockResolvedValue({});
+    mocks.tx.inventoryMovement.createMany.mockResolvedValue({ count: 0 });
     mocks.tx.coupon.update.mockResolvedValue({});
     mocks.tx.couponRedemption.delete.mockResolvedValue({});
   });
@@ -245,6 +251,10 @@ describe("syncStoreCheckoutPayment", () => {
         },
       }),
     );
+    mocks.tx.product.findMany.mockResolvedValue([
+      { id: "p1", status: ProductStatus.ACTIVE },
+      { id: "p2", status: ProductStatus.ACTIVE },
+    ]);
 
     await syncStoreCheckoutPayment(SYNC_INPUT_CANCELLED);
 
@@ -255,7 +265,14 @@ describe("syncStoreCheckoutPayment", () => {
         data: expect.objectContaining({ stockQuantity: { increment: 2 } }),
       }),
     );
-    expect(mocks.tx.inventoryMovement.create).toHaveBeenCalledTimes(2);
+    expect(mocks.tx.inventoryMovement.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.arrayContaining([
+          expect.objectContaining({ productId: "p1", quantityDelta: 2 }),
+          expect.objectContaining({ productId: "p2", quantityDelta: 1 }),
+        ]),
+      }),
+    );
   });
 
   it("reverts OUT_OF_STOCK back to ACTIVE when restoring inventory", async () => {
@@ -273,17 +290,16 @@ describe("syncStoreCheckoutPayment", () => {
         },
       }),
     );
-    mocks.tx.product.findUnique.mockResolvedValue({
-      status: ProductStatus.OUT_OF_STOCK,
-    });
+    mocks.tx.product.findMany.mockResolvedValue([
+      { id: "p1", status: ProductStatus.OUT_OF_STOCK },
+    ]);
 
     await syncStoreCheckoutPayment(SYNC_INPUT_CANCELLED);
 
-    expect(mocks.tx.product.update).toHaveBeenCalledWith(
+    expect(mocks.tx.product.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          status: ProductStatus.ACTIVE,
-        }),
+        where: { id: { in: ["p1"] } },
+        data: expect.objectContaining({ status: ProductStatus.ACTIVE }),
       }),
     );
   });

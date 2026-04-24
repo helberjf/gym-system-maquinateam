@@ -955,16 +955,19 @@ export async function createStoreCheckoutSession(
     });
 
     if (couponValidation?.ok) {
-      await tx.coupon.update({
-        where: {
-          id: couponValidation.coupon.id,
-        },
-        data: {
-          usageCount: {
-            increment: 1,
-          },
-        },
-      });
+      const couponUpdated = await tx.$executeRaw`
+        UPDATE "Coupon"
+        SET "usageCount" = "usageCount" + 1
+        WHERE "id" = ${couponValidation.coupon.id}
+          AND "active" = true
+          AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
+      `;
+
+      if (couponUpdated === 0) {
+        throw new ConflictError(
+          "Este cupom atingiu o limite de uso. Remova-o para prosseguir.",
+        );
+      }
 
       await tx.couponRedemption.create({
         data: {
@@ -981,17 +984,31 @@ export async function createStoreCheckoutSession(
         continue;
       }
 
-      const nextStock = item.stockQuantity - item.quantity;
-
-      await tx.product.update({
+      const decremented = await tx.product.updateMany({
         where: {
           id: item.productId,
+          trackInventory: true,
+          stockQuantity: { gte: item.quantity },
         },
         data: {
-          stockQuantity: {
-            decrement: item.quantity,
-          },
-          status: nextStock <= 0 ? ProductStatus.OUT_OF_STOCK : ProductStatus.ACTIVE,
+          stockQuantity: { decrement: item.quantity },
+        },
+      });
+
+      if (decremented.count === 0) {
+        throw new ConflictError(
+          `Estoque insuficiente para ${item.name}. Outro cliente pode ter comprado o ultimo item. Atualize o carrinho e tente novamente.`,
+        );
+      }
+
+      await tx.product.updateMany({
+        where: {
+          id: item.productId,
+          stockQuantity: { lte: 0 },
+          status: ProductStatus.ACTIVE,
+        },
+        data: {
+          status: ProductStatus.OUT_OF_STOCK,
         },
       });
 
@@ -1629,6 +1646,12 @@ export async function refundStoreOrder(
   if (!checkoutPayment?.providerPaymentId) {
     throw new ConflictError(
       "Este pedido nao possui um identificador de pagamento no gateway para estorno.",
+    );
+  }
+
+  if (checkoutPayment.provider !== "MERCADO_PAGO") {
+    throw new ConflictError(
+      "Estornos automaticos so estao disponiveis para pagamentos via Mercado Pago. Para Pix AbacatePay, processe a devolucao manualmente no painel do banco e registre o estorno no pedido.",
     );
   }
 

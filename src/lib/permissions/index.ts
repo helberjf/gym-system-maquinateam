@@ -75,6 +75,32 @@ export const PERMISSIONS = {
   viewReports: [UserRole.ADMIN, UserRole.RECEPCAO],
   uploadFiles: [UserRole.ADMIN, UserRole.RECEPCAO, UserRole.PROFESSOR],
   exportReports: [UserRole.ADMIN, UserRole.RECEPCAO],
+  viewPhysicalAssessments: [
+    UserRole.ADMIN,
+    UserRole.RECEPCAO,
+    UserRole.PROFESSOR,
+    UserRole.ALUNO,
+  ],
+  managePhysicalAssessments: [
+    UserRole.ADMIN,
+    UserRole.RECEPCAO,
+    UserRole.PROFESSOR,
+  ],
+  viewGamification: [
+    UserRole.ADMIN,
+    UserRole.RECEPCAO,
+    UserRole.PROFESSOR,
+    UserRole.ALUNO,
+  ],
+  viewFinancialReports: [UserRole.ADMIN],
+  manageExpenses: [UserRole.ADMIN, UserRole.RECEPCAO],
+  viewNutritionPlans: [
+    UserRole.ADMIN,
+    UserRole.RECEPCAO,
+    UserRole.PROFESSOR,
+    UserRole.ALUNO,
+  ],
+  manageNutritionPlans: [UserRole.ADMIN, UserRole.PROFESSOR],
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;

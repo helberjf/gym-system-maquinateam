@@ -69,7 +69,6 @@ const providers: NextAuthConfig["providers"] = [
         Google({
           clientId: process.env.GOOGLE_CLIENT_ID!,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-          allowDangerousEmailAccountLinking: true,
         }),
       ]
     : []),
@@ -130,11 +129,24 @@ export const authConfig: NextAuthConfig = {
           role: true,
           isActive: true,
           emailVerified: true,
+          passwordHash: true,
+          accounts: {
+            where: { provider: "google" },
+            select: { id: true },
+          },
         },
       });
 
       if (dbUser && !dbUser.isActive) {
         return `/login?error=${AUTH_ERROR_CODES.accountDisabled}`;
+      }
+
+      if (account?.provider === "google" && dbUser) {
+        const hasGoogleLink = dbUser.accounts.length > 0;
+
+        if (!hasGoogleLink && (dbUser.passwordHash || !dbUser.emailVerified)) {
+          return `/login?error=${AUTH_ERROR_CODES.accountDisabled}`;
+        }
       }
 
       if (dbUser) {
@@ -251,15 +263,17 @@ export const authConfig: NextAuthConfig = {
       }
 
       if (account.provider === "google") {
-        const dbUser = await prisma.user.update({
+        const dbUser = await prisma.user.findUnique({
           where: { id: userId },
-          data: {
-            emailVerified: new Date(),
-          },
           select: {
             role: true,
+            emailVerified: true,
           },
         });
+
+        if (!dbUser) {
+          return;
+        }
 
         if (dbUser.role === UserRole.ALUNO) {
           await prisma.studentProfile.upsert({
@@ -267,12 +281,16 @@ export const authConfig: NextAuthConfig = {
               userId,
             },
             update: {
-              status: StudentStatus.ACTIVE,
+              status: dbUser.emailVerified
+                ? StudentStatus.ACTIVE
+                : StudentStatus.PENDING,
             },
             create: {
               userId,
               registrationNumber: buildStudentRegistrationNumber(userId),
-              status: StudentStatus.ACTIVE,
+              status: dbUser.emailVerified
+                ? StudentStatus.ACTIVE
+                : StudentStatus.PENDING,
               joinedAt: new Date(),
             },
           });

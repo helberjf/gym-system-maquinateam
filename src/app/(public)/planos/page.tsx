@@ -26,7 +26,7 @@ export const metadata = buildPublicMetadata({
   ],
 });
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 function RecommendedFullPlanCard({
   plan,

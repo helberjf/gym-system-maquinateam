@@ -28,7 +28,7 @@ export const metadata = buildPublicMetadata({
   ],
 });
 
-export const dynamic = "force-dynamic";
+export const revalidate = 120;
 
 export default async function ProductsPage({
   searchParams,

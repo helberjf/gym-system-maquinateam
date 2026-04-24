@@ -2,7 +2,11 @@ import { after } from "next/server";
 import { OrderStatus } from "@prisma/client";
 import { getAppUrl } from "@/lib/app-url";
 import { handleRouteError, successResponse } from "@/lib/errors";
-import { sendOrderDeliveredEmail, sendOrderShippedEmail } from "@/lib/mail";
+import {
+  safeSendEmail,
+  sendOrderDeliveredEmail,
+  sendOrderShippedEmail,
+} from "@/lib/mail";
 import { requireApiPermission } from "@/lib/permissions";
 import {
   adminLimiter,
@@ -42,23 +46,23 @@ export async function PATCH(request: Request, context: RouteContext) {
 
       if (order.status === OrderStatus.SHIPPED) {
         after(() =>
-          sendOrderShippedEmail({
+          safeSendEmail("order-shipped", sendOrderShippedEmail, {
             email: order.customerEmail as string,
             name: order.customerName,
             orderNumber: order.orderNumber,
             trackingCode: order.trackingCode,
             deliveryLabel: order.deliveryLabel,
             trackOrderUrl,
-          }).catch(console.error),
+          }),
         );
       } else if (order.status === OrderStatus.DELIVERED) {
         after(() =>
-          sendOrderDeliveredEmail({
+          safeSendEmail("order-delivered", sendOrderDeliveredEmail, {
             email: order.customerEmail as string,
             name: order.customerName,
             orderNumber: order.orderNumber,
             trackOrderUrl,
-          }).catch(console.error),
+          }),
         );
       }
     }

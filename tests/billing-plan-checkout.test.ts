@@ -325,19 +325,21 @@ describe("createPlanCheckoutSession", () => {
     const existingUrl = "https://www.mercadopago.com/checkout/v1/redirect?pref_id=existing";
     mocks.prisma.user.findUnique.mockResolvedValue(STUDENT_USER);
     mocks.prisma.plan.findFirst.mockResolvedValue(PLAN);
-    mocks.prisma.subscription.findFirst.mockResolvedValue({
-      id: "sub-pending",
-      status: SubscriptionStatus.PENDING,
-      plan: { name: "Plano Mensal" },
-      checkoutPayment: {
-        id: "cp-old",
-        status: PaymentStatus.PENDING,
-        checkoutUrl: existingUrl,
-        externalReference: "PLAN-OLD",
-        method: PaymentMethod.CREDIT_CARD,
-        provider: PaymentProvider.MERCADO_PAGO,
-      },
-    });
+    mocks.prisma.subscription.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: "sub-pending",
+        status: SubscriptionStatus.PENDING,
+        plan: { name: "Plano Mensal" },
+        checkoutPayment: {
+          id: "cp-old",
+          status: PaymentStatus.PENDING,
+          checkoutUrl: existingUrl,
+          externalReference: "PLAN-OLD",
+          method: PaymentMethod.CREDIT_CARD,
+          provider: PaymentProvider.MERCADO_PAGO,
+        },
+      });
     mocks.resolvePaymentProvider.mockReturnValue(PaymentProvider.MERCADO_PAGO);
     mocks.getAppUrl.mockReturnValue("https://example.com");
     mocks.buildMercadoPagoReturnUrls.mockReturnValue({});

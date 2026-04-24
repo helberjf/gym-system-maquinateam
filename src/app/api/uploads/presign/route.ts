@@ -74,6 +74,7 @@ export async function POST(request: Request) {
           filename: file.filename,
           contentType: file.contentType,
           prefix: input.prefix,
+          contentLength: file.sizeBytes,
         }),
       ),
     );

@@ -8,6 +8,15 @@ export default defineConfig({
     globals: true,
     clearMocks: true,
     restoreMocks: true,
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/.next/**",
+      "**/.claude/**",
+      "**/e2e/**",
+      "**/playwright-report/**",
+      "**/test-results/**",
+    ],
   },
   resolve: {
     alias: {

@@ -150,6 +150,8 @@ model User {
   inventoryMovements    InventoryMovement[]  @relation("InventoryMovementPerformedBy")
   orderStatusHistory    OrderStatusHistory[] @relation("OrderStatusChangedBy")
   checkoutPayments      CheckoutPayment[]
+  createdExpenses       Expense[]            @relation("ExpenseCreatedBy")
+  createdNutritionPlans NutritionPlan[]      @relation("NutritionPlanCreatedBy")
 
   @@index([role, isActive])
   @@map("users")
@@ -239,6 +241,12 @@ model StudentProfile {
   attendances           Attendance[]
   trainingAssignments   TrainingAssignment[]
   productSales          ProductSale[]
+  physicalAssessments   PhysicalAssessment[]
+  gamification          StudentGamification?
+  earnedBadges          StudentBadge[]
+  pointsHistory         GamificationEvent[]
+  nutritionPlans        NutritionPlan[]
+  whatsappOptIn         Boolean              @default(true)
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
 
@@ -249,26 +257,27 @@ model StudentProfile {
 }
 
 model TeacherProfile {
-  id                  String               @id @default(cuid())
-  userId              String               @unique
-  registrationNumber  String?              @unique
-  cpf                 String?              @unique
-  bio                 String?              @db.Text
-  specialties         String?
-  experienceYears     Int?
-  hireDate            DateTime?            @db.Date
-  hourlyRateCents     Int?
-  beltLevel           String?
-  notes               String?              @db.Text
-  isActive            Boolean              @default(true)
-  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  modalities          Modality[]
-  classes             ClassSchedule[]
-  trainingTemplates   TrainingTemplate[]
-  assignedTrainings   TrainingAssignment[] @relation("TrainingAssignmentTeacher")
-  responsibleStudents StudentProfile[]     @relation("StudentResponsibleTeacher")
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  id                   String               @id @default(cuid())
+  userId               String               @unique
+  registrationNumber   String?              @unique
+  cpf                  String?              @unique
+  bio                  String?              @db.Text
+  specialties          String?
+  experienceYears      Int?
+  hireDate             DateTime?            @db.Date
+  hourlyRateCents      Int?
+  beltLevel            String?
+  notes                String?              @db.Text
+  isActive             Boolean              @default(true)
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modalities           Modality[]
+  classes              ClassSchedule[]
+  trainingTemplates    TrainingTemplate[]
+  assignedTrainings    TrainingAssignment[] @relation("TrainingAssignmentTeacher")
+  responsibleStudents  StudentProfile[]     @relation("StudentResponsibleTeacher")
+  assessmentsConducted PhysicalAssessment[] @relation("AssessmentEvaluator")
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
 
   @@index([isActive])
   @@map("teacher_profiles")
@@ -347,24 +356,24 @@ model ClassEnrollment {
 }
 
 model Plan {
-  id                    String         @id @default(cuid())
+  id                    String            @id @default(cuid())
   name                  String
-  slug                  String         @unique
-  description           String?        @db.Text
-  benefits              String[]       @default([])
+  slug                  String            @unique
+  description           String?           @db.Text
+  benefits              String[]          @default([])
   modalityId            String?
   priceCents            Int
-  billingIntervalMonths Int            @default(1)
+  billingIntervalMonths Int               @default(1)
   durationMonths        Int?
   sessionsPerWeek       Int?
-  isUnlimited           Boolean        @default(false)
-  enrollmentFeeCents    Int            @default(0)
-  active                Boolean        @default(true)
-  modality              Modality?      @relation(fields: [modalityId], references: [id], onDelete: SetNull)
+  isUnlimited           Boolean           @default(false)
+  enrollmentFeeCents    Int               @default(0)
+  active                Boolean           @default(true)
+  modality              Modality?         @relation(fields: [modalityId], references: [id], onDelete: SetNull)
   subscriptions         Subscription[]
   checkoutPayments      CheckoutPayment[]
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
   @@index([active])
   @@index([modalityId])
@@ -549,22 +558,22 @@ model ProductSaleItem {
 
 model Wishlist {
   id        String         @id @default(cuid())
-  userId     String         @unique
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items      WishlistItem[]
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  userId    String         @unique
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     WishlistItem[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   @@map("wishlists")
 }
 
 model WishlistItem {
-  id         String    @id @default(cuid())
+  id         String   @id @default(cuid())
   wishlistId String
   productId  String
-  wishlist   Wishlist  @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
-  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  createdAt  DateTime  @default(now())
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
 
   @@unique([wishlistId, productId])
   @@index([wishlistId])
@@ -798,6 +807,7 @@ model CheckoutPayment {
   order                Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
   subscription         Subscription?       @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
   plan                 Plan?               @relation(fields: [planId], references: [id], onDelete: SetNull)
+  expense              Expense?            @relation("ExpenseCheckoutSource")
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 
@@ -914,4 +924,165 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([action])
   @@map("audit_logs")
+}
+
+enum BadgeRequirementType {
+  TOTAL_POINTS
+  CHECKIN_COUNT
+  CURRENT_STREAK
+  ASSESSMENT_COUNT
+}
+
+enum GamificationAction {
+  CHECKIN
+  STREAK_BONUS
+  ASSESSMENT
+  MANUAL_ADJUSTMENT
+}
+
+model StudentGamification {
+  id               String         @id @default(cuid())
+  studentId        String         @unique
+  totalPoints      Int            @default(0)
+  checkinCount     Int            @default(0)
+  assessmentCount  Int            @default(0)
+  currentStreak    Int            @default(0)
+  longestStreak    Int            @default(0)
+  lastActivityDate DateTime?      @db.Date
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  student          StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_gamification")
+}
+
+model GamificationBadge {
+  id              String               @id @default(cuid())
+  code            String               @unique
+  name            String
+  description     String               @db.Text
+  iconName        String?
+  requirementType BadgeRequirementType
+  threshold       Int
+  sortOrder       Int                  @default(0)
+  isActive        Boolean              @default(true)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  earnedBy        StudentBadge[]
+
+  @@index([requirementType])
+  @@map("gamification_badges")
+}
+
+model StudentBadge {
+  id        String            @id @default(cuid())
+  studentId String
+  badgeId   String
+  earnedAt  DateTime          @default(now())
+  student   StudentProfile    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  badge     GamificationBadge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, badgeId])
+  @@index([badgeId])
+  @@map("student_badges")
+}
+
+model GamificationEvent {
+  id        String             @id @default(cuid())
+  studentId String
+  action    GamificationAction
+  points    Int
+  reason    String?
+  metadata  Json?
+  createdAt DateTime           @default(now())
+  student   StudentProfile     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+  @@map("gamification_events")
+}
+
+model PhysicalAssessment {
+  id                     String          @id @default(cuid())
+  studentId              String
+  assessedById           String?
+  assessedAt             DateTime        @default(now())
+  weightKg               Float?
+  heightCm               Int?
+  bodyFatPercent         Float?
+  muscleMassKg           Float?
+  chestCm                Float?
+  waistCm                Float?
+  hipCm                  Float?
+  leftArmCm              Float?
+  rightArmCm             Float?
+  leftThighCm            Float?
+  rightThighCm           Float?
+  restingHeartRate       Int?
+  bloodPressureSystolic  Int?
+  bloodPressureDiastolic Int?
+  notes                  String?         @db.Text
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  student                StudentProfile  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assessedBy             TeacherProfile? @relation("AssessmentEvaluator", fields: [assessedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId, assessedAt])
+  @@index([assessedById])
+  @@map("physical_assessments")
+}
+
+enum ExpenseCategory {
+  MP_FEE
+  RENT
+  PAYROLL
+  MARKETING
+  UTILITIES
+  INFRASTRUCTURE
+  TAXES
+  SUPPLIES
+  OTHER
+}
+
+model Expense {
+  id                      String           @id @default(cuid())
+  category                ExpenseCategory
+  description             String
+  amountCents             Int
+  incurredAt              DateTime         @db.Date
+  notes                   String?          @db.Text
+  sourceCheckoutPaymentId String?          @unique
+  createdByUserId         String?
+  sourceCheckoutPayment   CheckoutPayment? @relation("ExpenseCheckoutSource", fields: [sourceCheckoutPaymentId], references: [id], onDelete: SetNull)
+  createdByUser           User?            @relation("ExpenseCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  @@index([category, incurredAt])
+  @@index([incurredAt])
+  @@map("expenses")
+}
+
+enum NutritionPlanStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model NutritionPlan {
+  id               String              @id @default(cuid())
+  studentProfileId String
+  createdByUserId  String?
+  status           NutritionPlanStatus @default(ACTIVE)
+  title            String
+  description      String?             @db.Text
+  content          Json
+  startsAt         DateTime?           @db.Date
+  endsAt           DateTime?           @db.Date
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  studentProfile   StudentProfile      @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  createdByUser    User?               @relation("NutritionPlanCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([studentProfileId, status])
+  @@index([createdByUserId])
+  @@map("nutrition_plans")
 }

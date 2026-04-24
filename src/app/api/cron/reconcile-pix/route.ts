@@ -1,0 +1,44 @@
+import { NextResponse } from "next/server";
+import { reconcilePendingPixCheckouts } from "@/lib/payments/pix-reconciliation";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function isAuthorized(request: Request) {
+  const cronSecret = process.env.CRON_SECRET?.trim();
+
+  if (!cronSecret) {
+    return process.env.VERCEL !== "1";
+  }
+
+  const authHeader = request.headers.get("authorization");
+  return authHeader === `Bearer ${cronSecret}`;
+}
+
+export async function GET(request: Request) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
+  }
+
+  try {
+    const result = await reconcilePendingPixCheckouts();
+    return NextResponse.json({ ok: true, ...result });
+  } catch (error) {
+    process.stderr.write(
+      `[cron][reconcile-pix] failed: ${
+        error instanceof Error ? error.message : String(error)
+      }\n`,
+    );
+    return NextResponse.json(
+      { ok: false, error: "Reconciliation failed" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  return GET(request);
+}

@@ -11,6 +11,7 @@ export default [
   {
     ignores: [
       ".next/**",
+      ".claude/**",
       "coverage/**",
       "node_modules/**",
       "prisma/migrations/**",
@@ -24,5 +25,16 @@ export default [
       "@next/next": nextPlugin,
     },
     rules: nextCoreWebVitalsRules,
+  },
+  {
+    files: ["public/sw.js"],
+    languageOptions: {
+      globals: {
+        self: "readonly",
+        caches: "readonly",
+        fetch: "readonly",
+        URL: "readonly",
+      },
+    },
   },
 ];

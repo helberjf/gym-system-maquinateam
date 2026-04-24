@@ -5,9 +5,12 @@ const mocks = vi.hoisted(() => ({
   prisma: {
     user: {
       findUnique: vi.fn(),
+      update: vi.fn(),
     },
   },
   verifyPassword: vi.fn(),
+  needsRehash: vi.fn(),
+  hashPassword: vi.fn(),
   enforceRateLimit: vi.fn(),
 }));
 
@@ -23,6 +26,8 @@ vi.mock("@/lib/prisma", () => ({
 
 vi.mock("@/lib/auth/password", () => ({
   verifyPassword: mocks.verifyPassword,
+  needsRehash: mocks.needsRehash,
+  hashPassword: mocks.hashPassword,
 }));
 
 vi.mock("@/lib/rate-limit", async () => {
@@ -46,6 +51,9 @@ describe("credentials auth smoke tests", () => {
     vi.clearAllMocks();
     mocks.enforceRateLimit.mockResolvedValue(undefined);
     mocks.verifyPassword.mockResolvedValue(true);
+    mocks.needsRehash.mockReturnValue(false);
+    mocks.hashPassword.mockResolvedValue("rehashed");
+    mocks.prisma.user.update.mockResolvedValue({ id: "user-1" });
   });
 
   it("allows login with verified email and correct password", async () => {

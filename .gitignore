@@ -43,3 +43,6 @@ prisma/dev.db-journal
 # Temporary files
 *.tmp
 *.temp
+
+# Claude Code worktrees / scratch
+.claude/worktrees/

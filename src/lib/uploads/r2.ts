@@ -78,7 +78,7 @@ function buildObjectKey(prefix: string, filename: string) {
   const year = String(now.getUTCFullYear());
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
   const safeFilename = sanitizeFilename(filename);
-  const uniqueSuffix = crypto.randomBytes(8).toString("hex");
+  const uniqueSuffix = crypto.randomBytes(16).toString("hex");
 
   return `${prefix}/${year}/${month}/${Date.now()}-${uniqueSuffix}-${safeFilename}`;
 }
@@ -109,6 +109,7 @@ export async function createPresignedUploadUrl(input: {
   contentType: string;
   prefix?: string;
   expiresInSeconds?: number;
+  contentLength?: number;
 }) {
   const config = getR2Config();
   const client = getR2Client();
@@ -121,6 +122,7 @@ export async function createPresignedUploadUrl(input: {
       Bucket: config.bucketName,
       Key: key,
       ContentType: input.contentType,
+      ContentLength: input.contentLength,
       CacheControl: "public, max-age=31536000, immutable",
     }),
     { expiresIn },
@@ -131,6 +133,7 @@ export async function createPresignedUploadUrl(input: {
     storageKey: key,
     publicUrl: `${config.publicBaseUrl}/${key}`,
     expiresInSeconds: expiresIn,
+    contentLength: input.contentLength,
   };
 }
 

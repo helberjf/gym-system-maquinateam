@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   fetchMercadoPagoPaymentDetails: vi.fn(),
   syncStoreCheckoutPayment: vi.fn(),
   syncPlanCheckoutPayment: vi.fn(),
+  recordMercadoPagoFeeForCheckout: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -40,6 +41,10 @@ vi.mock("@/lib/payments/checkout-sync", () => ({
   syncStoreCheckoutPayment: mocks.syncStoreCheckoutPayment,
   syncPlanCheckoutPayment: mocks.syncPlanCheckoutPayment,
   toJsonValue: (v: unknown) => v,
+}));
+
+vi.mock("@/lib/expenses/service", () => ({
+  recordMercadoPagoFeeForCheckout: mocks.recordMercadoPagoFeeForCheckout,
 }));
 
 import { processMercadoPagoPaymentWebhook } from "@/lib/payments/webhook";
@@ -216,5 +221,34 @@ describe("processMercadoPagoPaymentWebhook", () => {
         providerObjectId: "777",
       }),
     );
+  });
+
+  it("captures Mercado Pago fees into Expense when payment is approved", async () => {
+    mocks.fetchMercadoPagoPaymentDetails.mockResolvedValue({
+      ...BASE_PAYMENT_DETAILS,
+      fee_details: [{ type: "mercadopago_fee", amount: 3.5 }],
+    });
+
+    await processMercadoPagoPaymentWebhook(BASE_INPUT);
+
+    expect(mocks.recordMercadoPagoFeeForCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        checkoutPaymentId: "cp-1",
+        paymentDetails: expect.objectContaining({
+          fee_details: expect.any(Array),
+        }),
+      }),
+    );
+  });
+
+  it("does not capture fees when payment is not approved", async () => {
+    mocks.fetchMercadoPagoPaymentDetails.mockResolvedValue({
+      ...BASE_PAYMENT_DETAILS,
+      status: "pending",
+    });
+
+    await processMercadoPagoPaymentWebhook(BASE_INPUT);
+
+    expect(mocks.recordMercadoPagoFeeForCheckout).not.toHaveBeenCalled();
   });
 });

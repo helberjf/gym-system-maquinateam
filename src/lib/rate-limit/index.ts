@@ -36,6 +36,7 @@ type RateLimitCache = {
   redis?: Redis;
   limiterMap: Map<string, Ratelimit>;
   warnedAboutFallback?: boolean;
+  lastMemoryGcAt?: number;
 };
 
 const rateLimitCache = globalThis as typeof globalThis & {
@@ -188,6 +189,22 @@ function buildRateLimitHeaders(result: {
   return headers;
 }
 
+const MEMORY_STORE_GC_INTERVAL_MS = 60_000;
+const MEMORY_STORE_MAX_ENTRIES = 10_000;
+
+function pruneMemoryStore(
+  store: Map<string, MemoryStoreEntry>,
+  now: number,
+  maxWindowMs: number,
+) {
+  for (const [key, entry] of store) {
+    const lastTimestamp = entry.timestamps[entry.timestamps.length - 1];
+    if (lastTimestamp === undefined || lastTimestamp <= now - maxWindowMs) {
+      store.delete(key);
+    }
+  }
+}
+
 async function applyMemoryRateLimit(
   identifier: string,
   profile: RateLimitProfile,
@@ -195,6 +212,16 @@ async function applyMemoryRateLimit(
   const now = Date.now();
   const windowStart = now - profile.windowMs;
   const cache = getCache();
+
+  if (
+    !cache.lastMemoryGcAt ||
+    now - cache.lastMemoryGcAt > MEMORY_STORE_GC_INTERVAL_MS ||
+    cache.memoryStore.size > MEMORY_STORE_MAX_ENTRIES
+  ) {
+    pruneMemoryStore(cache.memoryStore, now, profile.windowMs);
+    cache.lastMemoryGcAt = now;
+  }
+
   const currentEntry = cache.memoryStore.get(identifier) ?? {
     timestamps: [],
   };
@@ -208,9 +235,13 @@ async function applyMemoryRateLimit(
     validTimestamps.push(now);
   }
 
-  cache.memoryStore.set(identifier, {
-    timestamps: validTimestamps,
-  });
+  if (validTimestamps.length === 0) {
+    cache.memoryStore.delete(identifier);
+  } else {
+    cache.memoryStore.set(identifier, {
+      timestamps: validTimestamps,
+    });
+  }
 
   const firstTimestamp = validTimestamps[0] ?? now;
   const reset = firstTimestamp + profile.windowMs;

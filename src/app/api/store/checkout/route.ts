@@ -2,7 +2,7 @@ import { after } from "next/server";
 import { getOptionalSession } from "@/lib/auth/session";
 import { getAppUrl } from "@/lib/app-url";
 import { handleRouteError, successResponse } from "@/lib/errors";
-import { sendOrderConfirmationEmail } from "@/lib/mail";
+import { safeSendEmail, sendOrderConfirmationEmail } from "@/lib/mail";
 import {
   attachRateLimitHeaders,
   enforceRateLimit,
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     if (checkout.customerEmail) {
       const trackOrderUrl = `${getAppUrl()}/minha-conta/pedidos/${checkout.orderId}`;
       after(() =>
-        sendOrderConfirmationEmail({
+        safeSendEmail("order-confirmation", sendOrderConfirmationEmail, {
           email: checkout.customerEmail as string,
           name: checkout.customerName,
           orderNumber: checkout.orderNumber,
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
           paymentMethod: checkout.paymentMethod,
           items: checkout.emailItems,
           trackOrderUrl,
-        }).catch(console.error),
+        }),
       );
     }
 

@@ -1,12 +1,17 @@
 import type { z } from "zod";
 import {
   AttendanceStatus,
+  GamificationAction,
   Prisma,
   StudentStatus,
   UserRole,
 } from "@prisma/client";
 import { hashPassword } from "@/lib/auth/password";
 import { logAuditEvent } from "@/lib/audit";
+import {
+  awardPointsSafely,
+  POINTS_PER_CHECKIN,
+} from "@/lib/academy/gamification";
 import {
   buildRegistrationNumber,
   slugify,
@@ -25,11 +30,13 @@ import {
 } from "@/lib/academy/access";
 import {
   ConflictError,
+  ForbiddenError,
   NotFoundError,
 } from "@/lib/errors";
 import { hasPermission } from "@/lib/permissions";
 import { buildOffsetPagination } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
+import { assertStudentMayAttend } from "@/lib/billing/service";
 import {
   attendanceFiltersSchema,
   checkInSchema,
@@ -2660,6 +2667,19 @@ export async function checkInStudent(
   await ensureVisibleStudent(context.viewer, input.studentProfileId);
   await ensureVisibleClassSchedule(context.viewer, input.classScheduleId);
 
+  if (input.overrideFinancial) {
+    if (
+      context.viewer.role !== UserRole.ADMIN &&
+      context.viewer.role !== UserRole.RECEPCAO
+    ) {
+      throw new ForbiddenError(
+        "Apenas a recepcao ou administrador podem liberar check-in com pendencia financeira.",
+      );
+    }
+  } else {
+    await assertStudentMayAttend(input.studentProfileId);
+  }
+
   const classDate = parseDateOnly(input.classDate) ?? startOfDay();
   const checkedInAt = new Date();
 
@@ -2749,6 +2769,18 @@ export async function checkInStudent(
     summary: "Check-in registrado na turma.",
     afterData: {
       studentProfileId: input.studentProfileId,
+      classScheduleId: input.classScheduleId,
+      classDate: classDate.toISOString(),
+    },
+  });
+
+  await awardPointsSafely({
+    studentId: input.studentProfileId,
+    action: GamificationAction.CHECKIN,
+    basePoints: POINTS_PER_CHECKIN,
+    reason: "Check-in registrado.",
+    metadata: {
+      attendanceId: result.id,
       classScheduleId: input.classScheduleId,
       classDate: classDate.toISOString(),
     },

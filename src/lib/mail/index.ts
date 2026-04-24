@@ -185,3 +185,18 @@ export async function sendOrderDeliveredEmail(args: {
     html: orderDeliveredEmailTemplate(args),
   });
 }
+
+export async function safeSendEmail<TArgs>(
+  label: string,
+  sender: (args: TArgs) => Promise<unknown>,
+  args: TArgs,
+) {
+  try {
+    await sender(args);
+    return { ok: true as const };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`[mail][warn] ${label} failed: ${message}\n`);
+    return { ok: false as const, error: message };
+  }
+}

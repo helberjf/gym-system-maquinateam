@@ -18,6 +18,8 @@ import {
   type ViewerContext,
 } from "@/lib/academy/access";
 import { logAuditEvent } from "@/lib/audit";
+import { notifyTrainingPlanCreated } from "@/lib/messaging/events";
+import { captureException } from "@/lib/observability/capture";
 import {
   ConflictError,
   ForbiddenError,
@@ -1334,6 +1336,23 @@ export async function createTrainingAssignments(
       status: input.status,
     },
   });
+
+  for (const assignment of createdAssignments) {
+    try {
+      await notifyTrainingPlanCreated({
+        studentProfileId: assignment.studentProfileId,
+        planTitle: assignment.title,
+      });
+    } catch (error) {
+      captureException(error, {
+        source: "training assignment notification",
+        extras: {
+          assignmentId: assignment.id,
+          studentProfileId: assignment.studentProfileId,
+        },
+      });
+    }
+  }
 
   return createdAssignments;
 }
