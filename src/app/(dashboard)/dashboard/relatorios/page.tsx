@@ -29,9 +29,11 @@ function buildExportHref(
     modalityId?: string;
     teacherId?: string;
   },
+  format: "csv" | "xlsx" | "pdf" = "csv",
 ) {
   const params = new URLSearchParams();
   params.set("kind", kind);
+  params.set("format", format);
 
   if (filters.dateFrom) {
     params.set("dateFrom", filters.dateFrom);
@@ -142,13 +144,28 @@ export default async function ReportsPage({
             <a href={buildExportHref("attendance", filters)}>CSV presenca</a>
           </Button>
           <Button asChild variant="secondary" size="sm">
+            <a href={buildExportHref("attendance", filters, "xlsx")}>XLSX presenca</a>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
+            <a href={buildExportHref("attendance", filters, "pdf")}>PDF presenca</a>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
             <a href={buildExportHref("payments", filters)}>CSV pagamentos</a>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
+            <a href={buildExportHref("payments", filters, "xlsx")}>XLSX pagamentos</a>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
+            <a href={buildExportHref("payments", filters, "pdf")}>PDF pagamentos</a>
           </Button>
           <Button asChild variant="secondary" size="sm">
             <a href={buildExportHref("delinquency", filters)}>CSV inadimplencia</a>
           </Button>
           <Button asChild variant="secondary" size="sm">
             <a href={buildExportHref("sales", filters)}>CSV vendas</a>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
+            <a href={buildExportHref("sales", filters, "xlsx")}>XLSX vendas</a>
           </Button>
           <Button asChild variant="secondary" size="sm">
             <a href={buildExportHref("low-stock", filters)}>CSV estoque baixo</a>

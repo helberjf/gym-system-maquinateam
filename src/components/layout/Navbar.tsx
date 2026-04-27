@@ -9,6 +9,7 @@ export function Navbar() {
     { href: "/", label: "Home" },
     { href: "/products", label: "Produtos" },
     { href: "/planos", label: "Planos" },
+    { href: "/blog", label: "Blog" },
     { href: "/contato", label: "Contato" },
     { href: "/faq", label: "FAQ" },
   ];

@@ -11,6 +11,7 @@ import {
 } from "@/lib/payments/checkout-sync";
 import {
   fetchMercadoPagoPaymentDetails,
+  getMercadoPagoFinancialSummary,
   mapMercadoPagoPaymentMethod,
   mapMercadoPagoPaymentStatus,
 } from "@/lib/payments/mercadopago";
@@ -37,6 +38,12 @@ export async function processMercadoPagoPaymentWebhook(
   const paymentMethod = mapMercadoPagoPaymentMethod(
     paymentDetails.payment_type_id,
   );
+  const financialSummary = getMercadoPagoFinancialSummary(paymentDetails);
+  const eventPayload = toJsonValue({
+    webhook: input.payload,
+    payment: paymentDetails,
+    financial: financialSummary,
+  });
   const eventProviderKey = `${input.providerKey}:${paymentStatus}`;
   const existingEvent = await prisma.webhookEvent.findUnique({
     where: {
@@ -54,7 +61,8 @@ export async function processMercadoPagoPaymentWebhook(
         },
         data: {
           eventType: input.eventType,
-          payload: toJsonValue(input.payload),
+          providerObjectId: input.providerObjectId,
+          payload: eventPayload,
         },
         select: {
           id: true,
@@ -66,7 +74,7 @@ export async function processMercadoPagoPaymentWebhook(
           providerKey: eventProviderKey,
           providerObjectId: input.providerObjectId,
           eventType: input.eventType,
-          payload: toJsonValue(input.payload),
+          payload: eventPayload,
         },
         select: {
           id: true,
@@ -146,10 +154,16 @@ export async function processMercadoPagoPaymentWebhook(
     });
   }
 
-  if (paymentStatus === PaymentStatus.PAID) {
+  if (
+    paymentStatus === PaymentStatus.PAID ||
+    paymentStatus === PaymentStatus.REFUNDED
+  ) {
+    const paidAt = financialSummary.approvedAt
+      ? new Date(financialSummary.approvedAt)
+      : new Date();
     await recordMercadoPagoFeeForCheckout({
       checkoutPaymentId: checkoutPayment.id,
-      paidAt: new Date(),
+      paidAt,
       paymentDetails,
     });
   }
@@ -169,5 +183,12 @@ export async function processMercadoPagoPaymentWebhook(
     received: true,
     checkoutPaymentId: checkoutPayment.id,
     status: paymentStatus,
+    financial: {
+      grossAmountCents: financialSummary.amountCents,
+      netReceivedCents: financialSummary.netReceivedCents,
+      feeCents: financialSummary.feeCents,
+      installments: financialSummary.installments,
+      statusDetail: financialSummary.statusDetail,
+    },
   };
 }

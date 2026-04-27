@@ -9,6 +9,7 @@ import { endOfDay, startOfDay } from "@/lib/academy/constants";
 import { ForbiddenError } from "@/lib/errors";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { buildCsv, type ReportTable } from "@/lib/reports/exporters";
 import type { dreFiltersSchema } from "@/lib/validators";
 
 type DreFiltersInput = z.infer<typeof dreFiltersSchema>;
@@ -344,27 +345,11 @@ export const MANUAL_EXPENSE_CATEGORIES: ExpenseCategory[] = [
   ExpenseCategory.OTHER,
 ];
 
-function escapeCsvValue(value: unknown) {
-  if (value === null || value === undefined) {
-    return "";
-  }
-  const normalized =
-    value instanceof Date
-      ? value.toISOString()
-      : typeof value === "string"
-        ? value
-        : String(value);
-  if (/[",\n;]/.test(normalized)) {
-    return `"${normalized.replace(/"/g, '""')}"`;
-  }
-  return normalized;
-}
-
 function formatCentsForCsv(value: number) {
   return (value / 100).toFixed(2).replace(".", ",");
 }
 
-export function exportDreCsv(report: DreReport): string {
+export function exportDreTable(report: DreReport): ReportTable {
   const rows: (string | number)[][] = [];
   rows.push([
     "Periodo",
@@ -406,7 +391,12 @@ export function exportDreCsv(report: DreReport): string {
     ]);
   }
 
-  return rows
-    .map((row) => row.map((cell) => escapeCsvValue(cell)).join(";"))
-    .join("\n");
+  return {
+    title: "DRE financeiro",
+    rows,
+  };
+}
+
+export function exportDreCsv(report: DreReport): string {
+  return buildCsv(exportDreTable(report).rows);
 }

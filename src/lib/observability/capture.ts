@@ -1,4 +1,5 @@
 import { logger, serializeError } from "./logger";
+import { sendAlert } from "./tracing";
 
 type CaptureContext = {
   source?: string;
@@ -36,4 +37,15 @@ export function captureException(error: unknown, context: CaptureContext = {}) {
       });
     }
   }
+
+  void sendAlert({
+    level: "error",
+    source: context.source ?? "unhandled exception",
+    message: error instanceof Error ? error.message : String(error),
+    requestId: context.requestId,
+    extras: {
+      userId: context.userId,
+      ...(context.extras ?? {}),
+    },
+  });
 }

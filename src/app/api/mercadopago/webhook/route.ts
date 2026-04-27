@@ -9,6 +9,7 @@ import {
   verifyMercadoPagoWebhookRequest,
 } from "@/lib/payments/mercadopago";
 import { processMercadoPagoPaymentWebhook } from "@/lib/payments/webhook";
+import { withTrace } from "@/lib/observability/tracing";
 
 export const runtime = "nodejs";
 
@@ -44,10 +45,20 @@ export async function POST(request: Request) {
 
     await verifyMercadoPagoWebhookRequest(request);
     const parsed = await parseMercadoPagoWebhookPayload(request);
-    const result = await processMercadoPagoPaymentWebhook({
+    const result = await withTrace("mercadopago webhook", async (trace) => {
+      const processed = await processMercadoPagoPaymentWebhook({
+        eventType: parsed.eventType,
+        payload: parsed.payload,
+        providerKey: parsed.providerKey,
+        providerObjectId: parsed.providerObjectId,
+      });
+
+      return {
+        ...processed,
+        traceId: trace.traceId,
+      };
+    }, {
       eventType: parsed.eventType,
-      payload: parsed.payload,
-      providerKey: parsed.providerKey,
       providerObjectId: parsed.providerObjectId,
     });
 

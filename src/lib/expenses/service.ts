@@ -5,6 +5,7 @@ import { logAuditEvent } from "@/lib/audit";
 import { BadRequestError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { buildOffsetPagination } from "@/lib/pagination";
 import { hasPermission } from "@/lib/permissions";
+import { getMercadoPagoFinancialSummary } from "@/lib/payments/mercadopago";
 import { prisma } from "@/lib/prisma";
 import type {
   createExpenseSchema,
@@ -235,7 +236,13 @@ function extractMercadoPagoFeeCents(paymentDetails: unknown): number {
 export async function recordMercadoPagoFeeForCheckout(
   input: MpFeeCaptureInput,
 ) {
-  const amountCents = extractMercadoPagoFeeCents(input.paymentDetails);
+  const summary = getMercadoPagoFinancialSummary(
+    input.paymentDetails as Parameters<typeof getMercadoPagoFinancialSummary>[0],
+  );
+  const amountCents =
+    summary.feeCents > 0
+      ? summary.feeCents
+      : extractMercadoPagoFeeCents(input.paymentDetails);
   if (amountCents <= 0) {
     return null;
   }
@@ -253,14 +260,31 @@ export async function recordMercadoPagoFeeForCheckout(
       where: { sourceCheckoutPaymentId: input.checkoutPaymentId },
       create: {
         category: ExpenseCategory.MP_FEE,
-        description: `Taxa MercadoPago - checkout ${input.checkoutPaymentId}`,
+        description: `Taxa MercadoPago - pagamento ${summary.providerPaymentId ?? input.checkoutPaymentId}`,
         amountCents,
         incurredAt,
         sourceCheckoutPaymentId: input.checkoutPaymentId,
+        notes: JSON.stringify({
+          providerPaymentId: summary.providerPaymentId,
+          paymentMethodId: summary.paymentMethodId,
+          installments: summary.installments,
+          grossAmountCents: summary.amountCents,
+          netReceivedCents: summary.netReceivedCents,
+          feeDetails: summary.feeDetails,
+        }),
       },
       update: {
+        description: `Taxa MercadoPago - pagamento ${summary.providerPaymentId ?? input.checkoutPaymentId}`,
         amountCents,
         incurredAt,
+        notes: JSON.stringify({
+          providerPaymentId: summary.providerPaymentId,
+          paymentMethodId: summary.paymentMethodId,
+          installments: summary.installments,
+          grossAmountCents: summary.amountCents,
+          netReceivedCents: summary.netReceivedCents,
+          feeDetails: summary.feeDetails,
+        }),
       },
     });
   } catch (error) {

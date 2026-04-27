@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
 import { signOut } from "@/auth";
+import { DashboardNotifications } from "@/components/dashboard/DashboardNotifications";
 import { BRAND } from "@/lib/constants/brand";
+import { getViewerContextFromSession } from "@/lib/academy/access";
 import { requireAuthenticatedSession } from "@/lib/auth/guards";
+import { getDashboardNotifications } from "@/lib/notifications/service";
 import { hasPermission } from "@/lib/permissions";
 
 const roleLabelMap: Record<UserRole, string> = {
@@ -25,6 +28,8 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await requireAuthenticatedSession("/dashboard");
+  const viewer = await getViewerContextFromSession(session);
+  const notifications = await getDashboardNotifications(viewer);
   const sidebarNotice =
     session.user.role === UserRole.ALUNO
       ? null
@@ -54,6 +59,11 @@ export default async function DashboardLayout({
     {
       href: "/dashboard/turmas",
       label: "Turmas",
+      visible: hasPermission(session.user.role, "viewClassSchedules"),
+    },
+    {
+      href: "/dashboard/agenda",
+      label: "Agenda",
       visible: hasPermission(session.user.role, "viewClassSchedules"),
     },
     {
@@ -201,7 +211,10 @@ export default async function DashboardLayout({
           </div>
         </aside>
 
-        <main className="flex-1 px-5 py-6 md:px-8 md:py-8">{children}</main>
+        <main className="flex-1 px-5 py-6 md:px-8 md:py-8">
+          <DashboardNotifications notifications={notifications} />
+          {children}
+        </main>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { ProductStatus } from "@prisma/client";
+import { getBlogPosts } from "@/lib/blog";
 import { prisma } from "@/lib/prisma";
 import { absoluteUrl } from "@/lib/seo";
 
@@ -30,6 +31,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.7,
     },
+    {
+      url: absoluteUrl("/blog"),
+      changeFrequency: "weekly",
+      priority: 0.85,
+    },
+    ...getBlogPosts().map((post) => ({
+      url: absoluteUrl(`/blog/${post.slug}`),
+      lastModified: post.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.78,
+    })),
     {
       url: absoluteUrl("/politica-de-privacidade"),
       changeFrequency: "yearly",

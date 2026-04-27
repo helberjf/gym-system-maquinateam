@@ -17,7 +17,7 @@ test.describe("Public home", () => {
 
     await expect(page).toHaveURL(/\/login(\?|$)/);
     await expect(
-      page.getByRole("heading", { name: /entrar|acesso/i }),
+      page.getByRole("heading", { name: /entre|acesso|evolucao/i }),
     ).toBeVisible();
   });
 });

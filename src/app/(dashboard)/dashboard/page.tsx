@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { OrderStatus, UserRole } from "@prisma/client";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { AdvancedDashboardChart } from "@/components/dashboard/AdvancedDashboardChart";
 import { SimpleBarChart } from "@/components/dashboard/SimpleBarChart";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
@@ -92,6 +93,12 @@ export default async function DashboardPage() {
             visible: hasPermission(session.user.role, "viewClassSchedules"),
           },
           {
+            href: "/dashboard/agenda",
+            title: "Agenda",
+            description: "Calendario visual das turmas ativas da semana.",
+            visible: hasPermission(session.user.role, "viewClassSchedules"),
+          },
+          {
             href: "/dashboard/presenca",
             title: "Presenca",
             description: "Seus check-ins, historico e frequencia.",
@@ -151,6 +158,12 @@ export default async function DashboardPage() {
             href: "/dashboard/turmas",
             title: "Turmas",
             description: "Grade, horarios e vinculos de alunos.",
+            visible: hasPermission(session.user.role, "viewClassSchedules"),
+          },
+          {
+            href: "/dashboard/agenda",
+            title: "Agenda operacional",
+            description: "Calendario visual semanal com salas, professores e ocupacao.",
             visible: hasPermission(session.user.role, "viewClassSchedules"),
           },
           {
@@ -950,6 +963,16 @@ export default async function DashboardPage() {
 
       {session.user.role === UserRole.ADMIN && adminDashboardData ? (
         <>
+          <AdvancedDashboardChart
+            title="Receita e presenca"
+            description="Comparativo executivo dos ultimos meses para acompanhar caixa e recorrencia operacional."
+            primaryLabel="Faturamento"
+            secondaryLabel="Presencas"
+            primaryPoints={adminDashboardData.charts.revenueByMonth}
+            secondaryPoints={adminDashboardData.charts.attendanceByMonth}
+            primaryFormatter={(value) => formatCurrencyFromCents(value)}
+          />
+
           <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <SimpleBarChart
               title="Faturamento recente"

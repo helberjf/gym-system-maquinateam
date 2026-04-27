@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { captureException } from "@/lib/observability/capture";
 import { reconcilePendingPixCheckouts } from "@/lib/payments/pix-reconciliation";
 
 export const runtime = "nodejs";
@@ -27,11 +28,7 @@ export async function GET(request: Request) {
     const result = await reconcilePendingPixCheckouts();
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
-    process.stderr.write(
-      `[cron][reconcile-pix] failed: ${
-        error instanceof Error ? error.message : String(error)
-      }\n`,
-    );
+    captureException(error, { source: "pix reconciliation cron" });
     return NextResponse.json(
       { ok: false, error: "Reconciliation failed" },
       { status: 500 },

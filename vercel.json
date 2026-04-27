@@ -20,11 +20,5 @@
     "src/app/api/cron/**/route.ts": {
       "maxDuration": 60
     }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/reconcile-pix",
-      "schedule": "*/15 * * * *"
-    }
-  ]
+  }
 }

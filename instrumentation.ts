@@ -9,8 +9,9 @@ export async function register() {
   }
 
   const dsn = process.env.SENTRY_DSN?.trim();
+  const alerts = Boolean(process.env.ALERT_WEBHOOK_URL?.trim());
   if (!dsn) {
-    logger.info("observability ready", { sentry: "disabled" });
+    logger.info("observability ready", { sentry: "disabled", alerts });
     return;
   }
 
@@ -34,5 +35,5 @@ export async function register() {
     // Replace this block after installing @sentry/nextjs (see commented code above).
   });
 
-  logger.info("observability ready", { sentry: "configured" });
+  logger.info("observability ready", { sentry: "configured", alerts });
 }

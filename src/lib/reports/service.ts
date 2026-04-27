@@ -21,6 +21,7 @@ import { isLowStockProduct } from "@/lib/commerce/constants";
 import { ForbiddenError } from "@/lib/errors";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { buildCsv, type ReportTable } from "@/lib/reports/exporters";
 import {
   reportExportKindSchema,
   reportFiltersSchema,
@@ -105,31 +106,6 @@ function resolveReportRange(filters: ReportFiltersInput): ResolvedReportRange {
     dateFrom,
     dateTo: endOfDay(dateTo),
   };
-}
-
-function escapeCsvValue(value: unknown) {
-  if (value === null || value === undefined) {
-    return "";
-  }
-
-  const normalized =
-    value instanceof Date
-      ? value.toISOString()
-      : typeof value === "string"
-        ? value
-        : String(value);
-
-  if (/[",\n;]/.test(normalized)) {
-    return `"${normalized.replace(/"/g, '""')}"`;
-  }
-
-  return normalized;
-}
-
-function buildCsv(rows: unknown[][]) {
-  return rows
-    .map((row) => row.map((cell) => escapeCsvValue(cell)).join(";"))
-    .join("\n");
 }
 
 function buildEmptySeries(range: ResolvedReportRange) {
@@ -741,11 +717,15 @@ export async function getAdminDashboardData(viewer: ViewerContext) {
   const today = startOfDay(now);
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const revenueMonths = buildMonthlySeries(now, 6);
+  const attendanceMonths = buildMonthlySeries(now, 6);
   const attendanceDays = buildEmptySeries({
     dateFrom: addDays(today, -6),
     dateTo: endOfDay(today),
   });
   const revenueMap = new Map(revenueMonths.map((point) => [point.note as string, point]));
+  const attendanceMonthMap = new Map(
+    attendanceMonths.map((point) => [point.note as string, point]),
+  );
   const attendanceMap = new Map(attendanceDays.map((point) => [point.note as string, point]));
 
   const [
@@ -762,6 +742,7 @@ export async function getAdminDashboardData(viewer: ViewerContext) {
     recentSales,
     recentAuditLogs,
     paymentsForChart,
+    attendancesForMonthlyChart,
     attendancesForChart,
   ] = await prisma.$transaction([
     prisma.studentProfile.count({
@@ -983,6 +964,25 @@ export async function getAdminDashboardData(viewer: ViewerContext) {
           getAttendanceVisibilityWhere(viewer),
           {
             classDate: {
+              gte: addMonths(monthStart, -5),
+              lte: endOfDay(now),
+            },
+            status: {
+              in: [AttendanceStatus.CHECKED_IN, AttendanceStatus.CHECKED_OUT],
+            },
+          },
+        ],
+      },
+      select: {
+        classDate: true,
+      },
+    }),
+    prisma.attendance.findMany({
+      where: {
+        AND: [
+          getAttendanceVisibilityWhere(viewer),
+          {
+            classDate: {
               gte: addDays(today, -6),
               lte: endOfDay(today),
             },
@@ -1011,6 +1011,15 @@ export async function getAdminDashboardData(viewer: ViewerContext) {
     }
   }
 
+  for (const attendance of attendancesForMonthlyChart) {
+    const monthKey = attendance.classDate.toISOString().slice(0, 7);
+    const monthPoint = attendanceMonthMap.get(monthKey);
+
+    if (monthPoint) {
+      monthPoint.value += 1;
+    }
+  }
+
   for (const attendance of attendancesForChart) {
     const dayKey = attendance.classDate.toISOString().slice(0, 10);
     const dayPoint = attendanceMap.get(dayKey);
@@ -1033,6 +1042,7 @@ export async function getAdminDashboardData(viewer: ViewerContext) {
     },
     charts: {
       revenueByMonth: revenueMonths,
+      attendanceByMonth: attendanceMonths,
       attendanceByDay: attendanceDays,
     },
     recentTrainings,
@@ -1302,120 +1312,144 @@ export async function getReportsPageData(
   };
 }
 
-export async function exportReportCsv(
+export async function exportReportTable(
   viewer: ViewerContext,
   filters: ReportFiltersInput,
   kind: ReportExportKind,
-) {
+): Promise<ReportTable> {
   ensureReportsAccess(viewer);
 
   const range = resolveReportRange(filters);
 
   if (kind === "attendance") {
     const attendance = await loadAttendanceDataset(viewer, filters, range);
-    return buildCsv([
-      ["Data", "Status", "Aluno", "Matricula", "Turma", "Modalidade", "Professor"],
-      ...attendance.records.map((record) => [
-        formatDateTimeLabel(record.classDate),
-        record.status,
-        record.studentProfile.user.name,
-        record.studentProfile.registrationNumber,
-        record.classSchedule.title,
-        record.classSchedule.modality.name,
-        record.classSchedule.teacherProfile.user.name,
-      ]),
-    ]);
+    return {
+      title: "Relatorio de presenca",
+      rows: [
+        ["Data", "Status", "Aluno", "Matricula", "Turma", "Modalidade", "Professor"],
+        ...attendance.records.map((record) => [
+          formatDateTimeLabel(record.classDate),
+          record.status,
+          record.studentProfile.user.name,
+          record.studentProfile.registrationNumber,
+          record.classSchedule.title,
+          record.classSchedule.modality.name,
+          record.classSchedule.teacherProfile.user.name,
+        ]),
+      ],
+    };
   }
 
   if (kind === "payments") {
     const payments = await loadPaymentDataset(viewer, filters, range);
-    return buildCsv([
-      [
-        "Aluno",
-        "Matricula",
-        "Plano",
-        "Status",
-        "Valor",
-        "Vencimento",
-        "Pagamento",
-        "Descricao",
+    return {
+      title: "Relatorio de pagamentos",
+      rows: [
+        [
+          "Aluno",
+          "Matricula",
+          "Plano",
+          "Status",
+          "Valor",
+          "Vencimento",
+          "Pagamento",
+          "Descricao",
+        ],
+        ...payments.records.map((payment) => [
+          payment.studentProfile.user.name,
+          payment.studentProfile.registrationNumber,
+          payment.subscription.plan.name,
+          payment.status,
+          payment.amountCents / 100,
+          payment.dueDate ? formatDateTimeLabel(payment.dueDate) : "",
+          payment.paidAt ? formatDateTimeLabel(payment.paidAt) : "",
+          payment.description ?? "",
+        ]),
       ],
-      ...payments.records.map((payment) => [
-        payment.studentProfile.user.name,
-        payment.studentProfile.registrationNumber,
-        payment.subscription.plan.name,
-        payment.status,
-        payment.amountCents / 100,
-        payment.dueDate ? formatDateTimeLabel(payment.dueDate) : "",
-        payment.paidAt ? formatDateTimeLabel(payment.paidAt) : "",
-        payment.description ?? "",
-      ]),
-    ]);
+    };
   }
 
   if (kind === "delinquency") {
     const payments = await loadPaymentDataset(viewer, filters, range);
-    return buildCsv([
-      [
-        "Aluno",
-        "Matricula",
-        "Modalidade",
-        "Professor",
-        "Cobrancas em atraso",
-        "Valor em atraso",
-        "Vencimento mais antigo",
+    return {
+      title: "Relatorio de inadimplencia",
+      rows: [
+        [
+          "Aluno",
+          "Matricula",
+          "Modalidade",
+          "Professor",
+          "Cobrancas em atraso",
+          "Valor em atraso",
+          "Vencimento mais antigo",
+        ],
+        ...payments.delinquency.map((entry) => [
+          entry.studentName,
+          entry.registrationNumber,
+          entry.modalityName ?? "",
+          entry.teacherName ?? "",
+          entry.overdueCount,
+          entry.overdueAmountCents / 100,
+          entry.oldestDueDate ? formatDateTimeLabel(entry.oldestDueDate) : "",
+        ]),
       ],
-      ...payments.delinquency.map((entry) => [
-        entry.studentName,
-        entry.registrationNumber,
-        entry.modalityName ?? "",
-        entry.teacherName ?? "",
-        entry.overdueCount,
-        entry.overdueAmountCents / 100,
-        entry.oldestDueDate ? formatDateTimeLabel(entry.oldestDueDate) : "",
-      ]),
-    ]);
+    };
   }
 
   if (kind === "sales") {
     const sales = await loadSalesDataset(viewer, filters, range);
-    return buildCsv([
-      [
-        "Venda",
-        "Data",
-        "Status",
-        "Cliente",
-        "Responsavel",
-        "Produto",
-        "Categoria",
-        "Quantidade",
-        "Total item",
+    return {
+      title: "Relatorio de vendas",
+      rows: [
+        [
+          "Venda",
+          "Data",
+          "Status",
+          "Cliente",
+          "Responsavel",
+          "Produto",
+          "Categoria",
+          "Quantidade",
+          "Total item",
+        ],
+        ...sales.sales.flatMap((sale) =>
+          sale.items.map((item) => [
+            sale.saleNumber,
+            formatDateTimeLabel(sale.soldAt),
+            sale.status,
+            sale.studentProfile?.user.name ?? sale.customerName ?? "Balcao",
+            sale.soldByUser.name,
+            item.product.name,
+            item.product.category,
+            item.quantity,
+            item.lineTotalCents / 100,
+          ]),
+        ),
       ],
-      ...sales.sales.flatMap((sale) =>
-        sale.items.map((item) => [
-          sale.saleNumber,
-          formatDateTimeLabel(sale.soldAt),
-          sale.status,
-          sale.studentProfile?.user.name ?? sale.customerName ?? "Balcao",
-          sale.soldByUser.name,
-          item.product.name,
-          item.product.category,
-          item.quantity,
-          item.lineTotalCents / 100,
-        ]),
-      ),
-    ]);
+    };
   }
 
   const lowStockProducts = await loadLowStockDataset(viewer);
-  return buildCsv([
-    ["Produto", "Categoria", "Estoque", "Limite de alerta", "Status"],
-    ...lowStockProducts.map((product) => [
-      product.name,
-      product.category,
-      product.stockQuantity,
-      product.lowStockThreshold,
-      product.status,
-    ]),
-  ]);
+  return {
+    title: "Relatorio de estoque baixo",
+    rows: [
+      ["Produto", "Categoria", "Estoque", "Limite de alerta", "Status"],
+      ...lowStockProducts.map((product) => [
+        product.name,
+        product.category,
+        product.stockQuantity,
+        product.lowStockThreshold,
+        product.status,
+      ]),
+    ],
+  };
+}
+
+export async function exportReportCsv(
+  viewer: ViewerContext,
+  filters: ReportFiltersInput,
+  kind: ReportExportKind,
+) {
+  const table = await exportReportTable(viewer, filters, kind);
+  return buildCsv(table.rows);
 }

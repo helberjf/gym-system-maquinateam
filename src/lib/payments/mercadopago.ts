@@ -55,9 +55,24 @@ type MercadoPagoPreferenceResponse = {
 export type MercadoPagoPaymentDetails = {
   id?: number | string;
   status?: string;
+  status_detail?: string;
   payment_type_id?: string;
+  payment_method_id?: string;
   transaction_amount?: number;
+  installments?: number;
   external_reference?: string;
+  date_approved?: string;
+  date_created?: string;
+  transaction_details?: {
+    net_received_amount?: number;
+    total_paid_amount?: number;
+    installment_amount?: number;
+  };
+  fee_details?: Array<{
+    type?: string;
+    amount?: number;
+    fee_payer?: string;
+  }>;
   message?: string;
 };
 
@@ -291,6 +306,57 @@ export function mapMercadoPagoPaymentMethod(paymentTypeId?: string | null) {
     default:
       return PaymentMethod.CREDIT_CARD;
   }
+}
+
+function moneyToCents(value?: number | null) {
+  if (!Number.isFinite(value ?? Number.NaN)) {
+    return 0;
+  }
+
+  return Math.round((value ?? 0) * 100);
+}
+
+export function getMercadoPagoFinancialSummary(
+  paymentDetails: MercadoPagoPaymentDetails,
+) {
+  const feeDetails = Array.isArray(paymentDetails.fee_details)
+    ? paymentDetails.fee_details
+        .map((fee) => ({
+          type: fee.type ?? "unknown",
+          amountCents: moneyToCents(fee.amount),
+          payer: fee.fee_payer ?? null,
+        }))
+        .filter((fee) => fee.amountCents > 0)
+    : [];
+  const feeCents = feeDetails.reduce(
+    (acc, fee) => acc + fee.amountCents,
+    0,
+  );
+
+  return {
+    providerPaymentId:
+      paymentDetails.id !== undefined ? String(paymentDetails.id) : null,
+    status: paymentDetails.status ?? null,
+    statusDetail: paymentDetails.status_detail ?? null,
+    externalReference: paymentDetails.external_reference ?? null,
+    paymentType: paymentDetails.payment_type_id ?? null,
+    paymentMethodId: paymentDetails.payment_method_id ?? null,
+    installments: paymentDetails.installments ?? null,
+    approvedAt: paymentDetails.date_approved ?? null,
+    createdAt: paymentDetails.date_created ?? null,
+    amountCents: moneyToCents(paymentDetails.transaction_amount),
+    totalPaidCents: moneyToCents(
+      paymentDetails.transaction_details?.total_paid_amount,
+    ),
+    netReceivedCents: moneyToCents(
+      paymentDetails.transaction_details?.net_received_amount,
+    ),
+    installmentAmountCents: moneyToCents(
+      paymentDetails.transaction_details?.installment_amount,
+    ),
+    feeCents,
+    feeDetails,
+  };
 }
 
 export async function verifyMercadoPagoWebhookRequest(request: Request) {

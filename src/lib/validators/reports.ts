@@ -55,8 +55,21 @@ export const reportExportKindSchema = z.enum([
   "low-stock",
 ]);
 
+export const reportExportFormatSchema = z.enum(["csv", "xlsx", "pdf"]);
+
 export const reportExportQuerySchema = reportFiltersBaseSchema
   .extend({
     kind: reportExportKindSchema,
+    format: reportExportFormatSchema.default("csv"),
+  })
+  .superRefine(validateReportDateRange);
+
+export const dreExportQuerySchema = reportFiltersBaseSchema
+  .pick({
+    dateFrom: true,
+    dateTo: true,
+  })
+  .extend({
+    format: reportExportFormatSchema.default("csv"),
   })
   .superRefine(validateReportDateRange);

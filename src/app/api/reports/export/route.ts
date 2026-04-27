@@ -6,14 +6,15 @@ import {
   enforceRateLimit,
   reportLimiter,
 } from "@/lib/rate-limit";
-import { exportReportCsv } from "@/lib/reports/service";
+import { buildExportResponse } from "@/lib/reports/exporters";
+import { exportReportTable } from "@/lib/reports/service";
 import { parseSearchParams, reportExportQuerySchema } from "@/lib/validators";
 
 export const runtime = "nodejs";
 
 function buildFilename(kind: string) {
   const date = new Date().toISOString().slice(0, 10);
-  return `relatorio-${kind}-${date}.csv`;
+  return `relatorio-${kind}-${date}`;
 }
 
 export async function GET(request: Request) {
@@ -33,14 +34,11 @@ export async function GET(request: Request) {
     rateLimitHeaders = rateLimit.headers;
 
     const viewer = await getViewerContextFromSession(session);
-    const csv = await exportReportCsv(viewer, query, query.kind);
-    const response = new Response(csv, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${buildFilename(query.kind)}"`,
-        "Cache-Control": "no-store",
-      },
+    const table = await exportReportTable(viewer, query, query.kind);
+    const response = buildExportResponse({
+      table,
+      format: query.format,
+      filenameBase: buildFilename(query.kind),
     });
 
     return attachRateLimitHeaders(response, rateLimitHeaders);

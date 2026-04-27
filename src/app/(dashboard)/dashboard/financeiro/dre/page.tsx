@@ -22,8 +22,9 @@ export const dynamic = "force-dynamic";
 function buildExportHref(filters: {
   dateFrom?: string;
   dateTo?: string;
-}) {
+}, format: "csv" | "xlsx" | "pdf" = "csv") {
   const params = new URLSearchParams();
+  params.set("format", format);
   if (filters.dateFrom) {
     params.set("dateFrom", filters.dateFrom);
   }
@@ -97,6 +98,12 @@ export default async function DrePage({
         <div className="mt-5 flex flex-wrap gap-3">
           <Button asChild variant="secondary" size="sm">
             <a href={buildExportHref(filters)}>CSV DRE</a>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
+            <a href={buildExportHref(filters, "xlsx")}>XLSX DRE</a>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
+            <a href={buildExportHref(filters, "pdf")}>PDF DRE</a>
           </Button>
         </div>
       </section>
