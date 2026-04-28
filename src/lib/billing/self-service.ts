@@ -8,6 +8,7 @@ import {
   SubscriptionStatus,
 } from "@prisma/client";
 import { logAuditEvent } from "@/lib/audit";
+import { hashPassword } from "@/lib/auth/password";
 import { formatCurrencyFromCents } from "@/lib/billing/constants";
 import {
   ConflictError,
@@ -26,6 +27,7 @@ import {
   getMercadoPagoWebhookUrl,
 } from "@/lib/payments/mercadopago";
 import { resolvePaymentProvider } from "@/lib/payments/provider";
+import type { GuestPlanCheckoutInput } from "@/lib/validators/auth";
 
 type MutationContext = {
   userId: string;
@@ -497,5 +499,113 @@ export function buildPlanCheckoutSummary(plan: Plan) {
       plan.enrollmentFeeCents > 0
         ? `${plan.name} + matricula ${formatCurrencyFromCents(plan.enrollmentFeeCents)}`
         : plan.name,
+  };
+}
+
+function buildGuestRegistrationNumber(userId: string) {
+  return `ALU-${userId.slice(-8).toUpperCase()}`;
+}
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function normalizeOptionalString(value?: string | null) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+export async function createGuestPlanCheckoutSession(
+  planId: string,
+  input: GuestPlanCheckoutInput,
+  context: { request?: Request },
+) {
+  const plan = await getPurchasablePlan(planId);
+  const email = normalizeEmail(input.email);
+  const cpf = input.cpf;
+  const paymentMethodEnum = input.paymentMethod as PaymentMethod;
+
+  const [existingUser, existingCpfOwner] = await Promise.all([
+    prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    }),
+    prisma.studentProfile.findUnique({
+      where: { cpf },
+      select: { id: true },
+    }),
+  ]);
+
+  if (existingUser) {
+    throw new ConflictError(
+      "Ja existe uma conta com esse e-mail. Faca login para assinar.",
+    );
+  }
+
+  if (existingCpfOwner) {
+    throw new ConflictError(
+      "Ja existe uma conta com esse CPF. Faca login para assinar.",
+    );
+  }
+
+  const passwordHash = await hashPassword(input.password);
+  const now = new Date();
+
+  const createdUser = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        name: input.name.trim(),
+        email,
+        passwordHash,
+        role: "ALUNO",
+        phone: normalizeOptionalString(input.phone),
+        emailVerified: now,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    });
+
+    await tx.studentProfile.create({
+      data: {
+        userId: user.id,
+        registrationNumber: buildGuestRegistrationNumber(user.id),
+        status: StudentStatus.ACTIVE,
+        cpf,
+        joinedAt: now,
+      },
+    });
+
+    return user;
+  });
+
+  await logAuditEvent({
+    request: context.request,
+    actorId: createdUser.id,
+    action: "AUTH_REGISTERED",
+    entityType: "User",
+    entityId: createdUser.id,
+    summary: "Cadastro automatico via guest checkout de plano.",
+    afterData: {
+      email,
+      role: "ALUNO",
+      via: "plan-guest-checkout",
+      planId: plan.id,
+    },
+  });
+
+  const checkout = await createPlanCheckoutSession(
+    plan.id,
+    { paymentMethod: paymentMethodEnum },
+    { userId: createdUser.id, request: context.request },
+  );
+
+  return {
+    ...checkout,
+    userId: createdUser.id,
+    email: createdUser.email,
   };
 }

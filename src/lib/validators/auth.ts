@@ -221,6 +221,38 @@ export const resetPasswordSchema = z
     }
   });
 
+export const guestPlanCheckoutSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(3, "Informe seu nome completo.")
+    .max(120, "Nome muito longo."),
+  email: emailSchema,
+  password: passwordSchema,
+  phone: z
+    .string()
+    .trim()
+    .min(8, "Informe um telefone com DDD.")
+    .max(20, "Telefone muito longo."),
+  cpf: z.preprocess(
+    (value) => {
+      if (typeof value !== "string") {
+        return value;
+      }
+
+      const digits = onlyDigits(value);
+      return digits.length > 0 ? digits : undefined;
+    },
+    z
+      .string()
+      .length(11, "Informe um CPF com 11 digitos.")
+      .refine(validateCpf, "Informe um CPF valido."),
+  ),
+  paymentMethod: z.enum(["PIX", "CREDIT_CARD"]),
+});
+
+export type GuestPlanCheckoutInput = z.infer<typeof guestPlanCheckoutSchema>;
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type ResendVerificationInput = z.infer<

@@ -115,21 +115,33 @@ export function PlanCheckoutButton({
   }
 
   if (!resolvedAuthentication) {
+    void callbackUrl;
     return (
-      <Link
-        href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-        className={[
-          "inline-flex items-center justify-center gap-2 rounded-lg border font-medium",
-          "transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red",
-          "px-4 py-2 text-sm",
-          primaryToneClasses,
-          className ?? "",
-        ]
-          .join(" ")
-          .trim()}
-      >
-        Entrar para assinar
-      </Link>
+      <div className="space-y-2">
+        <Link
+          href={`/planos/${planId}/assinar`}
+          className={[
+            "inline-flex items-center justify-center gap-2 rounded-lg border font-medium",
+            "transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red",
+            "px-4 py-2 text-sm",
+            primaryToneClasses,
+            className ?? "",
+          ]
+            .join(" ")
+            .trim()}
+        >
+          Assinar agora
+        </Link>
+        <p className="text-center text-[11px] uppercase tracking-[0.16em] text-brand-gray-light">
+          Ja tem conta?{" "}
+          <Link
+            href={`/login?callbackUrl=${encodeURIComponent("/planos")}`}
+            className="text-white underline-offset-4 hover:underline"
+          >
+            Entrar
+          </Link>
+        </p>
+      </div>
     );
   }
 
