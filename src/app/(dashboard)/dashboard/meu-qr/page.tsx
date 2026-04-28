@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import QRCode from "qrcode";
 import { UserRole } from "@prisma/client";
 import { PageHeader } from "@/components/dashboard/PageHeader";
@@ -47,9 +48,13 @@ export default async function MyQrPage() {
       />
 
       <section className="rounded-3xl border border-brand-gray-mid bg-brand-gray-dark p-6 text-center">
-        <img
+        <Image
           src={dataUrl}
           alt="QR code pessoal para check-in"
+          width={320}
+          height={320}
+          unoptimized
+          priority
           className="mx-auto h-80 w-80 rounded-2xl border border-brand-gray-mid bg-brand-black p-4"
         />
         <p className="mt-4 text-sm text-brand-gray-light">

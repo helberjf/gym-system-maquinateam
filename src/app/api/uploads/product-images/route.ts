@@ -1,4 +1,5 @@
 import { uploadToR2 } from "@/lib/uploads/r2";
+import { optimizeProductImage } from "@/lib/uploads/optimize";
 import { handleRouteError, successResponse } from "@/lib/errors";
 import { requireApiPermission } from "@/lib/permissions";
 import {
@@ -51,19 +52,24 @@ export async function POST(request: Request) {
           allowedExtensions: [...PRODUCT_IMAGE_ALLOWED_EXTENSIONS],
           maxSizeBytes: PRODUCT_IMAGE_MAX_SIZE_BYTES,
         });
-        const buffer = Buffer.from(await validated.file.arrayBuffer());
-        const uploaded = await uploadToR2({
-          body: buffer,
-          contentType: validated.mimeType,
+        const rawBuffer = Buffer.from(await validated.file.arrayBuffer());
+        const optimized = await optimizeProductImage({
+          buffer: rawBuffer,
+          mimeType: validated.mimeType,
           filename: validated.safeFilename,
+        });
+        const uploaded = await uploadToR2({
+          body: optimized.buffer,
+          contentType: optimized.mimeType,
+          filename: optimized.filename,
           prefix: "products",
         });
 
         return {
           url: uploaded.url,
           storageKey: uploaded.storageKey,
-          mimeType: validated.mimeType,
-          sizeBytes: validated.sizeBytes,
+          mimeType: optimized.mimeType,
+          sizeBytes: optimized.sizeBytes,
         };
       }),
     );

@@ -68,6 +68,18 @@ const mocks = vi.hoisted(() => {
       url: `https://files.example.com/${prefix}/${filename}`,
       storageKey: `${prefix}/${filename}`,
     })),
+    optimizeProductImage: vi.fn(
+      async (input: {
+        buffer: Buffer;
+        mimeType: string;
+        filename: string;
+      }) => ({
+        buffer: input.buffer,
+        mimeType: input.mimeType,
+        filename: input.filename,
+        sizeBytes: input.buffer.byteLength,
+      }),
+    ),
   };
 });
 
@@ -132,6 +144,10 @@ vi.mock("@/lib/commerce/service", () => ({
 vi.mock("@/lib/uploads/r2", () => ({
   createPresignedUploadUrl: mocks.createPresignedUploadUrl,
   uploadToR2: mocks.uploadToR2,
+}));
+
+vi.mock("@/lib/uploads/optimize", () => ({
+  optimizeProductImage: mocks.optimizeProductImage,
 }));
 
 describe("Billing and commerce API routes", () => {
