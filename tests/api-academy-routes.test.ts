@@ -78,7 +78,13 @@ const mocks = vi.hoisted(() => {
     createModality: vi.fn(async () => ({ id: "modality-1", slug: "jiu-jitsu" })),
     updateModality: vi.fn(async () => ({ id: "modality-1", slug: "jiu-jitsu" })),
     archiveModality: vi.fn(async () => undefined),
-    exportReportCsv: vi.fn(async () => "name,email\nAna,ana@example.com"),
+    exportReportTable: vi.fn(async () => ({
+      title: "Alunos",
+      rows: [
+        ["name", "email"],
+        ["Ana", "ana@example.com"],
+      ],
+    })),
     createStudent: vi.fn(async () => ({
       student: {
         id: "student-1",
@@ -187,7 +193,7 @@ vi.mock("@/lib/training/service", () => ({
 }));
 
 vi.mock("@/lib/reports/service", () => ({
-  exportReportCsv: mocks.exportReportCsv,
+  exportReportTable: mocks.exportReportTable,
 }));
 
 describe("Academy API routes", () => {
@@ -466,6 +472,6 @@ describe("Academy API routes", () => {
     expect(response.status).toBe(200);
     expectRateLimitHeaders(response);
     expect(response.headers.get("Content-Type")).toContain("text/csv");
-    expect(await response.text()).toContain("name,email");
+    expect(await response.text()).toContain("name;email");
   });
 });

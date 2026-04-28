@@ -35,6 +35,28 @@ vi.mock("@/lib/payments/mercadopago", () => ({
     if (typeId === "debit_card") return PaymentMethod.DEBIT_CARD;
     return PaymentMethod.CREDIT_CARD;
   },
+  getMercadoPagoFinancialSummary: (
+    paymentDetails: Record<string, unknown> | null | undefined,
+  ) => ({
+    providerPaymentId:
+      paymentDetails?.id !== undefined ? String(paymentDetails.id) : null,
+    status: (paymentDetails?.status as string | undefined) ?? null,
+    statusDetail: null,
+    externalReference:
+      (paymentDetails?.external_reference as string | undefined) ?? null,
+    paymentType:
+      (paymentDetails?.payment_type_id as string | undefined) ?? null,
+    paymentMethodId: null,
+    installments: null,
+    approvedAt: null,
+    createdAt: null,
+    amountCents: 0,
+    totalPaidCents: 0,
+    netReceivedCents: 0,
+    installmentAmountCents: 0,
+    feeCents: 0,
+    feeDetails: [],
+  }),
 }));
 
 vi.mock("@/lib/payments/checkout-sync", () => ({

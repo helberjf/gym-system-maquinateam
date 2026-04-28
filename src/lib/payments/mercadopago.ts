@@ -70,7 +70,7 @@ export type MercadoPagoPaymentDetails = {
   };
   fee_details?: Array<{
     type?: string;
-    amount?: number;
+    amount?: number | string;
     fee_payer?: string;
   }>;
   message?: string;
@@ -308,12 +308,19 @@ export function mapMercadoPagoPaymentMethod(paymentTypeId?: string | null) {
   }
 }
 
-function moneyToCents(value?: number | null) {
-  if (!Number.isFinite(value ?? Number.NaN)) {
+function moneyToCents(value?: number | string | null) {
+  const numeric =
+    typeof value === "string"
+      ? Number(value)
+      : typeof value === "number"
+        ? value
+        : Number.NaN;
+
+  if (!Number.isFinite(numeric)) {
     return 0;
   }
 
-  return Math.round((value ?? 0) * 100);
+  return Math.round(numeric * 100);
 }
 
 export function getMercadoPagoFinancialSummary(
