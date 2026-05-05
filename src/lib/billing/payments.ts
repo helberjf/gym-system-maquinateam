@@ -9,6 +9,7 @@ import { NotFoundError, ConflictError } from "@/lib/errors";
 import { hasPermission } from "@/lib/permissions";
 import { buildOffsetPagination } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
+import { ensureNextRecurringPaymentForSubscription } from "@/lib/billing/recurrence";
 import { isPaymentOverdue, type PaymentMethodFilter } from "@/lib/billing/constants";
 import { startOfDay } from "@/lib/academy/constants";
 import {
@@ -280,6 +281,11 @@ export async function createPayment(
     });
 
     await syncSubscriptionFinancialStatus(tx, input.subscriptionId);
+    if (input.status === PaymentStatus.PAID) {
+      await ensureNextRecurringPaymentForSubscription(tx, {
+        subscriptionId: input.subscriptionId,
+      });
+    }
 
     return created;
   });
@@ -367,6 +373,11 @@ export async function updatePayment(
     });
 
     await syncSubscriptionFinancialStatus(tx, input.subscriptionId);
+    if (input.status === PaymentStatus.PAID) {
+      await ensureNextRecurringPaymentForSubscription(tx, {
+        subscriptionId: input.subscriptionId,
+      });
+    }
 
     return updated;
   });

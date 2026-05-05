@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   OrderStatus,
   PaymentMethod,
@@ -35,6 +35,7 @@ const mocks = vi.hoisted(() => {
       delete: vi.fn(),
     },
     subscription: {
+      findUnique: vi.fn(),
       update: vi.fn(),
     },
     payment: {
@@ -114,10 +115,16 @@ function buildPlanCheckoutPayment(overrides: Record<string, unknown> = {}) {
       status: SubscriptionStatus.PENDING,
       cancelledAt: null,
       notes: null,
+      autoRenew: false,
+      startDate: new Date("2026-05-04T00:00:00.000Z"),
+      renewalDay: 4,
+      priceCents: 9900,
+      discountCents: 0,
       studentProfileId: "profile-1",
       plan: {
         id: "plan-1",
         name: "Plano Mensal",
+        billingIntervalMonths: 1,
       },
     },
     ...overrides,
@@ -129,6 +136,10 @@ function setupTx() {
     async (fn: (tx: typeof mocks.tx) => Promise<unknown>) => fn(mocks.tx),
   );
 }
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 // ─── syncStoreCheckoutPayment ─────────────────────────────────────────────────
 
@@ -387,6 +398,7 @@ describe("syncPlanCheckoutPayment", () => {
     setupTx();
     mocks.tx.checkoutPayment.update.mockResolvedValue({});
     mocks.tx.subscription.update.mockResolvedValue({});
+    mocks.tx.subscription.findUnique.mockResolvedValue(null);
     mocks.tx.payment.findFirst.mockResolvedValue(null);
     mocks.tx.payment.create.mockResolvedValue({});
     mocks.tx.payment.update.mockResolvedValue({});
@@ -438,6 +450,81 @@ describe("syncPlanCheckoutPayment", () => {
       }),
     );
     expect(mocks.tx.payment.update).not.toHaveBeenCalled();
+  });
+
+  it("creates the next monthly charge after a paid auto-renew checkout", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-04T12:00:00.000Z"));
+
+    mocks.tx.checkoutPayment.findUnique.mockResolvedValue(
+      buildPlanCheckoutPayment({
+        subscription: {
+          id: "sub-1",
+          status: SubscriptionStatus.PENDING,
+          cancelledAt: null,
+          notes: null,
+          autoRenew: true,
+          startDate: new Date("2026-05-04T00:00:00.000Z"),
+          renewalDay: 4,
+          priceCents: 9900,
+          discountCents: 1000,
+          studentProfileId: "profile-1",
+          plan: {
+            id: "plan-1",
+            name: "Plano Mensal",
+            billingIntervalMonths: 1,
+          },
+        },
+      }),
+    );
+    mocks.tx.subscription.findUnique.mockResolvedValue({
+      id: "sub-1",
+      studentProfileId: "profile-1",
+      status: SubscriptionStatus.ACTIVE,
+      startDate: new Date("2026-05-04T00:00:00.000Z"),
+      autoRenew: true,
+      renewalDay: 4,
+      priceCents: 9900,
+      discountCents: 1000,
+      checkoutPayment: { method: PaymentMethod.PIX },
+      plan: {
+        name: "Plano Mensal",
+        billingIntervalMonths: 1,
+      },
+    });
+    mocks.tx.payment.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        dueDate: new Date("2026-05-04T00:00:00.000Z"),
+        method: PaymentMethod.PIX,
+      })
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+
+    await syncPlanCheckoutPayment({
+      ...SYNC_INPUT_PAID,
+      provider: PaymentProvider.ABACATEPAY,
+      paymentMethod: PaymentMethod.PIX,
+    });
+
+    const recurringCreateCall = mocks.tx.payment.create.mock.calls.find(
+      (call) => call[0]?.data?.status === PaymentStatus.PENDING,
+    );
+
+    expect(recurringCreateCall?.[0]).toEqual(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          studentProfileId: "profile-1",
+          subscriptionId: "sub-1",
+          amountCents: 8900,
+          status: PaymentStatus.PENDING,
+          method: PaymentMethod.PIX,
+          dueDate: new Date("2026-06-04T00:00:00.000Z"),
+          externalReference: "REC-sub-1-2026-06-04",
+        }),
+      }),
+    );
   });
 
   it("updates existing Payment record when one already exists for this external reference", async () => {

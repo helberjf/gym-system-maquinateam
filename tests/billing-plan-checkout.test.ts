@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => {
   const tx = {
     subscription: {
       create: vi.fn(),
+      update: vi.fn(),
     },
     checkoutPayment: {
       create: vi.fn(),
@@ -36,6 +37,7 @@ const mocks = vi.hoisted(() => {
       },
       subscription: {
         findFirst: vi.fn(),
+        update: vi.fn(),
       },
       checkoutPayment: {
         update: vi.fn(),
@@ -126,6 +128,7 @@ function setupTransactionMock() {
   mocks.prisma.$transaction.mockImplementation(
     async (fn: (tx: typeof mocks.tx) => Promise<unknown>) => {
       mocks.tx.subscription.create.mockResolvedValue(CREATED_SUBSCRIPTION);
+      mocks.tx.subscription.update.mockResolvedValue(CREATED_SUBSCRIPTION);
       mocks.tx.checkoutPayment.create.mockResolvedValue(CREATED_CHECKOUT);
       mocks.tx.checkoutPayment.update.mockResolvedValue(CREATED_CHECKOUT);
       return fn(mocks.tx);
@@ -363,6 +366,23 @@ describe("createPlanCheckoutSession", () => {
     expect(result.subscriptionId).toBe(CREATED_SUBSCRIPTION.id);
     expect(result.redirectUrl).toContain("mercadopago.com");
     expect(mocks.createMercadoPagoPreference).toHaveBeenCalled();
+  });
+
+  it("creates online plan subscriptions as recurring without a fixed end date", async () => {
+    setupHappyPathMercadoPago();
+
+    await createPlanCheckoutSession("plan-1", INPUT_CREDIT, CONTEXT);
+
+    expect(mocks.tx.subscription.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          autoRenew: true,
+          endDate: null,
+          priceCents: PLAN.priceCents,
+          discountCents: 0,
+        }),
+      }),
+    );
   });
 
   it("passes correct externalReference and plan items to MercadoPago", async () => {

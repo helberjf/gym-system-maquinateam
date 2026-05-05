@@ -7,6 +7,7 @@ import {
   SubscriptionStatus,
   type Prisma,
 } from "@prisma/client";
+import { ensureNextRecurringPaymentForSubscription } from "@/lib/billing/recurrence";
 import { prisma } from "@/lib/prisma";
 
 type SyncCheckoutPaymentInput = {
@@ -329,6 +330,12 @@ export async function syncPlanCheckoutPayment(
             gatewayTransactionId: input.providerObjectId,
             description: `Pagamento inicial do plano ${checkoutPayment.subscription.plan.name}`,
           },
+        });
+      }
+
+      if (checkoutPayment.subscription.autoRenew) {
+        await ensureNextRecurringPaymentForSubscription(tx, {
+          subscriptionId: checkoutPayment.subscription.id,
         });
       }
 

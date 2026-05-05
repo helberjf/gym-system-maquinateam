@@ -39,12 +39,6 @@ type PlanCheckoutInput = {
   paymentMethod: PaymentMethod;
 };
 
-function addMonths(date: Date, amount: number) {
-  const nextDate = new Date(date);
-  nextDate.setMonth(nextDate.getMonth() + amount);
-  return nextDate;
-}
-
 function buildExternalReference(prefix: string) {
   const timestamp = Date.now().toString(36).toUpperCase();
   const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -183,10 +177,8 @@ export async function createPlanCheckoutSession(
   input: PlanCheckoutInput,
   context: MutationContext,
 ) {
-  const [user, plan] = await Promise.all([
-    getSelfServiceUser(context.userId),
-    getPurchasablePlan(planId),
-  ]);
+  const user = await getSelfServiceUser(context.userId);
+  const plan = await getPurchasablePlan(planId);
   const studentProfile = user.studentProfile!;
   const paymentProvider = resolvePaymentProvider(input.paymentMethod);
 
@@ -240,6 +232,9 @@ export async function createPlanCheckoutSession(
           name: true,
         },
       },
+      autoRenew: true,
+      endDate: true,
+      renewalDay: true,
       checkoutPayment: {
         select: {
           id: true,
@@ -260,6 +255,20 @@ export async function createPlanCheckoutSession(
     existingSubscription.checkoutPayment.method === input.paymentMethod &&
     existingSubscription.checkoutPayment.provider === paymentProvider
   ) {
+    if (
+      existingSubscription.autoRenew === false ||
+      existingSubscription.endDate instanceof Date
+    ) {
+      await prisma.subscription.update({
+        where: { id: existingSubscription.id },
+        data: {
+          autoRenew: true,
+          endDate: null,
+          renewalDay: existingSubscription.renewalDay ?? new Date().getDate(),
+        },
+      });
+    }
+
     return {
       subscriptionId: existingSubscription.id,
       redirectUrl: existingSubscription.checkoutPayment.checkoutUrl,
@@ -288,6 +297,15 @@ export async function createPlanCheckoutSession(
 
   const created = await prisma.$transaction(async (tx) => {
     if (existingSubscription?.id && existingSubscription.checkoutPayment?.id) {
+      await tx.subscription.update({
+        where: { id: existingSubscription.id },
+        data: {
+          autoRenew: true,
+          endDate: null,
+          renewalDay: existingSubscription.renewalDay ?? new Date().getDate(),
+        },
+      });
+
       const updated = await tx.checkoutPayment.update({
         where: {
           id: existingSubscription.checkoutPayment.id,
@@ -325,9 +343,9 @@ export async function createPlanCheckoutSession(
         planId: plan.id,
         status: SubscriptionStatus.PENDING,
         startDate: now,
-        endDate: addMonths(now, plan.durationMonths ?? plan.billingIntervalMonths),
+        endDate: null,
         renewalDay: now.getDate(),
-        autoRenew: false,
+        autoRenew: true,
         priceCents: plan.priceCents,
         discountCents: 0,
         notes: "Assinatura iniciada pelo checkout online.",
@@ -521,7 +539,7 @@ export async function createGuestPlanCheckoutSession(
   const cpf = input.cpf;
   const paymentMethodEnum = input.paymentMethod as PaymentMethod;
 
-  const [existingUser, existingCpfOwner] = await Promise.all([
+  const [existingUser, existingCpfOwner] = await prisma.$transaction([
     prisma.user.findUnique({
       where: { email },
       select: { id: true },

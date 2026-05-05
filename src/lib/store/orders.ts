@@ -584,10 +584,8 @@ async function getPreparedCartItemsForCart(
 }
 
 export async function getCheckoutPageData() {
-  const [user, cart] = await Promise.all([
-    getOptionalStoreCheckoutUser(),
-    getCartSnapshot(),
-  ]);
+  const user = await getOptionalStoreCheckoutUser();
+  const cart = await getCartSnapshot();
   const addresses = user
     ? await prisma.shippingAddress.findMany({
         where: {
@@ -1442,7 +1440,7 @@ export async function getAdminOrdersData(filters: OrderFilters) {
       : {}),
   };
 
-  const [totalOrders, summary] = await Promise.all([
+  const [totalOrders, summary] = await prisma.$transaction([
     prisma.order.count({ where }),
     prisma.order.groupBy({
       by: ["status"],

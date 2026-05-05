@@ -357,8 +357,8 @@ export default async function DashboardPage() {
       ];
     }
   } else if (session.user.role === UserRole.ADMIN) {
-    const [adminData, totalStoreOrders, openStoreOrders] = await Promise.all([
-      getAdminDashboardData(viewer),
+    const adminData = await getAdminDashboardData(viewer);
+    const [totalStoreOrders, openStoreOrders] = await prisma.$transaction([
       prisma.order.count(),
       prisma.order.count({
         where: {
@@ -410,21 +410,19 @@ export default async function DashboardPage() {
       },
     ];
   } else {
-    const [receptionData, openStoreOrders] = await Promise.all([
-      getReceptionDashboardData(viewer),
-      prisma.order.count({
-        where: {
-          status: {
-            in: [
-              OrderStatus.PENDING,
-              OrderStatus.CONFIRMED,
-              OrderStatus.PROCESSING,
-              OrderStatus.SHIPPED,
-            ],
-          },
+    const receptionData = await getReceptionDashboardData(viewer);
+    const openStoreOrders = await prisma.order.count({
+      where: {
+        status: {
+          in: [
+            OrderStatus.PENDING,
+            OrderStatus.CONFIRMED,
+            OrderStatus.PROCESSING,
+            OrderStatus.SHIPPED,
+          ],
         },
-      }),
-    ]);
+      },
+    });
     receptionDashboardData = receptionData;
     summaryTitle = "Painel da recepcao";
     summaryDescription =

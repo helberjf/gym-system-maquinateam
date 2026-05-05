@@ -20,5 +20,11 @@
     "src/app/api/cron/**/route.ts": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/recurring-payments",
+      "schedule": "0 8 * * *"
+    }
+  ]
 }
