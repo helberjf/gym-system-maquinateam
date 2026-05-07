@@ -1448,6 +1448,7 @@ export async function getAdminOrdersData(filters: OrderFilters) {
       _count: {
         _all: true,
       },
+      orderBy: { status: "asc" },
     }),
   ]);
   const pagination = buildOffsetPagination({

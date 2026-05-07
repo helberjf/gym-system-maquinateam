@@ -89,7 +89,11 @@ describe("recurring payments", () => {
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null);
 
-    const result = await ensureNextRecurringPaymentForSubscription(mocks.tx, {
+    const result = await ensureNextRecurringPaymentForSubscription(
+      mocks.tx as unknown as Parameters<
+        typeof ensureNextRecurringPaymentForSubscription
+      >[0],
+      {
       subscriptionId: "sub-1",
     });
 
@@ -112,7 +116,11 @@ describe("recurring payments", () => {
   it("does not stack a new charge while one is already pending", async () => {
     mocks.tx.payment.findFirst.mockResolvedValueOnce({ id: "open-pay" });
 
-    const result = await ensureNextRecurringPaymentForSubscription(mocks.tx, {
+    const result = await ensureNextRecurringPaymentForSubscription(
+      mocks.tx as unknown as Parameters<
+        typeof ensureNextRecurringPaymentForSubscription
+      >[0],
+      {
       subscriptionId: "sub-1",
     });
 
