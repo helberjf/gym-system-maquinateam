@@ -101,6 +101,24 @@ export const PERMISSIONS = {
     UserRole.ALUNO,
   ],
   manageNutritionPlans: [UserRole.ADMIN, UserRole.PROFESSOR],
+  viewMessages: [UserRole.ADMIN, UserRole.RECEPCAO],
+  manageMessages: [UserRole.ADMIN, UserRole.RECEPCAO],
+  manageMessageTemplates: [UserRole.ADMIN, UserRole.RECEPCAO],
+  viewLeads: [UserRole.ADMIN, UserRole.RECEPCAO],
+  manageLeads: [UserRole.ADMIN, UserRole.RECEPCAO],
+  deleteLeads: [UserRole.ADMIN],
+  manageAppSettings: [UserRole.ADMIN],
+  viewTeacherAvailability: [
+    UserRole.ADMIN,
+    UserRole.RECEPCAO,
+    UserRole.PROFESSOR,
+    UserRole.ALUNO,
+  ],
+  manageOwnTeacherAvailability: [UserRole.ADMIN, UserRole.PROFESSOR],
+  manageAnyTeacherAvailability: [UserRole.ADMIN, UserRole.RECEPCAO],
+  createReview: [UserRole.ALUNO, UserRole.ADMIN, UserRole.RECEPCAO, UserRole.PROFESSOR],
+  moderateReviews: [UserRole.ADMIN, UserRole.RECEPCAO],
+  viewReviewModeration: [UserRole.ADMIN, UserRole.RECEPCAO],
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;
