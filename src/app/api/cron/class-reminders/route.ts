@@ -9,7 +9,10 @@ export const dynamic = "force-dynamic";
 function isFallbackAuthorized(request: Request) {
   const cronSecret = process.env.CRON_SECRET?.trim();
   if (!cronSecret) {
-    return process.env.VERCEL !== "1";
+    if (process.env.NODE_ENV === "production") {
+      return false;
+    }
+    return true;
   }
   const authHeader = request.headers.get("authorization");
   return authHeader === `Bearer ${cronSecret}`;

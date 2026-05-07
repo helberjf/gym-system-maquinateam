@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { requestPasswordReset } from "@/lib/auth/service";
 import { handleRouteError, successResponse } from "@/lib/errors";
+import { logger, serializeError } from "@/lib/observability/logger";
 import {
   attachRateLimitHeaders,
   enforceRateLimit,
@@ -31,7 +32,13 @@ export async function POST(request: Request) {
     );
 
     if (deferredEmail) {
-      after(() => (deferredEmail as () => Promise<void>)().catch(console.error));
+      after(() =>
+        (deferredEmail as () => Promise<void>)().catch((error) => {
+          logger.error("auth.forgot_password.deferred_email_failed", {
+            error: serializeError(error),
+          });
+        }),
+      );
     }
 
     return attachRateLimitHeaders(successResponse(result), rateLimitHeaders);

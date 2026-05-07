@@ -4,6 +4,7 @@ import { ProductStatus } from "@prisma/client";
 import type { z } from "zod";
 import { isLowStockProduct } from "@/lib/commerce/constants";
 import { NotFoundError } from "@/lib/errors";
+import { logger, serializeError } from "@/lib/observability/logger";
 import { prisma } from "@/lib/prisma";
 import type { CatalogSortValue } from "@/lib/store/constants";
 import type { catalogFiltersSchema } from "@/lib/validators/store";
@@ -12,6 +13,7 @@ type CatalogFilters = z.infer<typeof catalogFiltersSchema>;
 
 export type StoreCatalogDataSource = "live" | "fallback";
 export const STORE_CATALOG_PAGE_SIZE = 8;
+const STORE_CATALOG_MAX_FETCH = 500;
 
 export type StoreCatalogImage = {
   id?: string;
@@ -738,7 +740,7 @@ export const getFeaturedStoreProducts = cache(async function getFeaturedStorePro
       return products;
     }
   } catch (error) {
-    console.error("Falha ao carregar produtos em destaque da loja.", error);
+    logger.error("store.catalog.featured_failed", { error: serializeError(error) });
   }
 
   return sortCatalogProducts(FALLBACK_STORE_PRODUCTS, "featured").slice(0, limit);
@@ -749,6 +751,7 @@ export async function getStoreCatalogData(filters: CatalogFilters) {
     const products = await prisma.product.findMany({
       where: getPublicProductWhere(filters),
       orderBy: getCatalogOrderBy(filters.sort as CatalogSortValue),
+      take: STORE_CATALOG_MAX_FETCH,
       select: publicProductCardSelect,
     });
 
@@ -761,6 +764,7 @@ export async function getStoreCatalogData(filters: CatalogFilters) {
       const syncedProducts = await prisma.product.findMany({
         where: getPublicProductWhere(filters),
         orderBy: getCatalogOrderBy(filters.sort as CatalogSortValue),
+        take: STORE_CATALOG_MAX_FETCH,
         select: publicProductCardSelect,
       });
       const syncedFilteredProducts = (syncedProducts as StoreCatalogProductCard[]).filter((product) =>
@@ -791,7 +795,7 @@ export async function getStoreCatalogData(filters: CatalogFilters) {
       source: "live" as const,
     };
   } catch (error) {
-    console.error("Falha ao carregar o catalogo publico da loja.", error);
+    logger.error("store.catalog.public_failed", { error: serializeError(error) });
     return buildFallbackCatalogData(filters);
   }
 }
@@ -958,7 +962,7 @@ export async function getStoreCatalogPageData(
       pagination,
     };
   } catch (error) {
-    console.error("Falha ao carregar o catalogo paginado da loja.", error);
+    logger.error("store.catalog.paged_failed", { error: serializeError(error) });
     return buildFallbackCatalogPageData(filters, {
       page,
       limit,
@@ -1038,7 +1042,7 @@ export const getStoreProductDetail = cache(async function getStoreProductDetail(
       return data;
     }
   } catch (error) {
-    console.error("Falha ao carregar detalhe do produto da loja.", error);
+    logger.error("store.catalog.product_detail_failed", { error: serializeError(error) });
   }
 
   const fallbackProduct = FALLBACK_STORE_PRODUCTS.find((product) => product.slug === slug);
@@ -1055,7 +1059,7 @@ export const getStoreProductDetail = cache(async function getStoreProductDetail(
       return data;
     }
   } catch (error) {
-    console.error("Falha ao sincronizar produto de demonstracao da loja.", error);
+    logger.error("store.catalog.demo_sync_failed", { error: serializeError(error) });
   }
 
   return {

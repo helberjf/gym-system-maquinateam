@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { logger, serializeError } from "@/lib/observability/logger";
 
 const SENSITIVE_FIELDS = new Set([
   "password",
@@ -108,6 +109,6 @@ export async function logAuditEvent(input: AuditInput) {
       },
     });
   } catch (error) {
-    console.error("audit log error:", error);
+    logger.error("audit.log_failed", { error: serializeError(error) });
   }
 }

@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { TooManyRequestsError } from "@/lib/errors";
+import { logger } from "@/lib/observability/logger";
 
 type RateLimitKeyPart =
   | string
@@ -70,9 +71,10 @@ function warnIfUsingMemoryFallback() {
     !cache.warnedAboutFallback
   ) {
     cache.warnedAboutFallback = true;
-    console.warn(
-      "rate limit fallback: UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are not configured. Production will use instance-local memory rate limiting.",
-    );
+    logger.warn("rate_limit.memory_fallback", {
+      reason:
+        "UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN missing. Distributed instances will not share rate-limit counters.",
+    });
   }
 }
 
@@ -432,4 +434,11 @@ export const pixStatusLimiter = createRateLimitProfile({
   limit: 60,
   windowMs: 60 * 1_000,
   message: "Muitas consultas de status em pouco tempo. Aguarde antes de tentar novamente.",
+});
+
+export const webhookLimiter = createRateLimitProfile({
+  key: "webhook",
+  limit: 240,
+  windowMs: 60 * 1_000,
+  message: "Webhook rate limit excedido.",
 });

@@ -5,6 +5,7 @@ import { logAuditEvent } from "@/lib/audit";
 import { BadRequestError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { buildOffsetPagination } from "@/lib/pagination";
 import { hasPermission } from "@/lib/permissions";
+import { logger, serializeError } from "@/lib/observability/logger";
 import { getMercadoPagoFinancialSummary } from "@/lib/payments/mercadopago";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -288,7 +289,9 @@ export async function recordMercadoPagoFeeForCheckout(
       },
     });
   } catch (error) {
-    console.error("mp fee capture error:", error);
+    logger.error("expenses.mp_fee_capture_failed", {
+      error: serializeError(error),
+    });
     return null;
   }
 }

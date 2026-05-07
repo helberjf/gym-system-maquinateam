@@ -11,6 +11,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { generateSecureToken, hashToken } from "@/lib/auth/tokens";
 import { revokeUserTokens } from "@/lib/auth/token-revocation";
 import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/mail";
+import { logger, serializeError } from "@/lib/observability/logger";
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -201,7 +202,10 @@ export async function registerStudent(
   if (options?.onEmailReady) {
     options.onEmailReady(() =>
       sendEmail().catch((error) => {
-        console.error("verification email error (deferred):", error);
+        logger.error("auth.verification_email.deferred_failed", {
+          userId: user.id,
+          error: serializeError(error),
+        });
         throw error;
       }),
     );
@@ -210,7 +214,10 @@ export async function registerStudent(
       await sendEmail();
     } catch (error) {
       emailSent = false;
-      console.error("verification email error:", error);
+      logger.error("auth.verification_email.failed", {
+        userId: user.id,
+        error: serializeError(error),
+      });
     }
   }
 
@@ -382,7 +389,10 @@ export async function resendVerificationEmail(
     });
   } catch (error) {
     emailSent = false;
-    console.error("resend verification email error:", error);
+    logger.error("auth.resend_verification.failed", {
+      userId: user.id,
+      error: serializeError(error),
+    });
   }
 
   await logAuditEvent({
@@ -464,7 +474,10 @@ export async function requestPasswordReset(
       await sendEmail();
     } catch (error) {
       emailSent = false;
-      console.error("password reset email error:", error);
+      logger.error("auth.password_reset_email.failed", {
+        userId: user.id,
+        error: serializeError(error),
+      });
     }
   }
 

@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   prisma: {
     webhookEvent: {
       findUnique: vi.fn(),
+      upsert: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
     },
@@ -37,26 +38,38 @@ vi.mock("@/lib/payments/mercadopago", () => ({
   },
   getMercadoPagoFinancialSummary: (
     paymentDetails: Record<string, unknown> | null | undefined,
-  ) => ({
-    providerPaymentId:
-      paymentDetails?.id !== undefined ? String(paymentDetails.id) : null,
-    status: (paymentDetails?.status as string | undefined) ?? null,
-    statusDetail: null,
-    externalReference:
-      (paymentDetails?.external_reference as string | undefined) ?? null,
-    paymentType:
-      (paymentDetails?.payment_type_id as string | undefined) ?? null,
-    paymentMethodId: null,
-    installments: null,
-    approvedAt: null,
-    createdAt: null,
-    amountCents: 0,
-    totalPaidCents: 0,
-    netReceivedCents: 0,
-    installmentAmountCents: 0,
-    feeCents: 0,
-    feeDetails: [],
-  }),
+  ) => {
+    const txAmount =
+      typeof paymentDetails?.transaction_amount === "number"
+        ? paymentDetails.transaction_amount
+        : 0;
+    const txDetails =
+      (paymentDetails?.transaction_details as
+        | { total_paid_amount?: number; net_received_amount?: number }
+        | undefined) ?? {};
+    return {
+      providerPaymentId:
+        paymentDetails?.id !== undefined ? String(paymentDetails.id) : null,
+      status: (paymentDetails?.status as string | undefined) ?? null,
+      statusDetail: null,
+      externalReference:
+        (paymentDetails?.external_reference as string | undefined) ?? null,
+      paymentType:
+        (paymentDetails?.payment_type_id as string | undefined) ?? null,
+      paymentMethodId: null,
+      currency:
+        (paymentDetails?.currency_id as string | undefined) ?? "BRL",
+      installments: null,
+      approvedAt: null,
+      createdAt: null,
+      amountCents: Math.round(txAmount * 100),
+      totalPaidCents: Math.round((txDetails.total_paid_amount ?? txAmount) * 100),
+      netReceivedCents: Math.round((txDetails.net_received_amount ?? 0) * 100),
+      installmentAmountCents: 0,
+      feeCents: 0,
+      feeDetails: [],
+    };
+  },
 }));
 
 vi.mock("@/lib/payments/checkout-sync", () => ({
@@ -76,6 +89,7 @@ const BASE_PAYMENT_DETAILS = {
   status: "approved",
   payment_type_id: "credit_card",
   transaction_amount: 150,
+  currency_id: "BRL",
   external_reference: "ext-ref-123",
 };
 
@@ -93,12 +107,14 @@ describe("processMercadoPagoPaymentWebhook", () => {
     mocks.fetchMercadoPagoPaymentDetails.mockResolvedValue(BASE_PAYMENT_DETAILS);
 
     mocks.prisma.webhookEvent.findUnique.mockResolvedValue(null);
+    mocks.prisma.webhookEvent.upsert.mockResolvedValue({ id: "evt-1", processed: false });
     mocks.prisma.webhookEvent.create.mockResolvedValue({ id: "evt-1", processed: false });
     mocks.prisma.webhookEvent.update.mockResolvedValue({ id: "evt-1", processed: true });
 
     mocks.prisma.checkoutPayment.findUnique.mockResolvedValue({
       id: "cp-1",
       kind: "STORE_ORDER",
+      amountCents: 15000,
     });
 
     mocks.syncStoreCheckoutPayment.mockResolvedValue(undefined);
@@ -126,6 +142,7 @@ describe("processMercadoPagoPaymentWebhook", () => {
     mocks.prisma.checkoutPayment.findUnique.mockResolvedValue({
       id: "cp-2",
       kind: "PLAN_SUBSCRIPTION",
+      amountCents: 15000,
     });
 
     const result = await processMercadoPagoPaymentWebhook(BASE_INPUT);
@@ -142,11 +159,7 @@ describe("processMercadoPagoPaymentWebhook", () => {
   });
 
   it("deduplicates: returns dedup=true when event was already processed", async () => {
-    mocks.prisma.webhookEvent.findUnique.mockResolvedValue({
-      id: "evt-1",
-      processed: true,
-    });
-    mocks.prisma.webhookEvent.update.mockResolvedValue({
+    mocks.prisma.webhookEvent.upsert.mockResolvedValue({
       id: "evt-1",
       processed: true,
     });
@@ -159,35 +172,39 @@ describe("processMercadoPagoPaymentWebhook", () => {
     expect(mocks.syncPlanCheckoutPayment).not.toHaveBeenCalled();
   });
 
-  it("creates a new webhook event when none exists for this provider key", async () => {
-    mocks.prisma.webhookEvent.findUnique.mockResolvedValue(null);
-
+  it("upserts a webhook event using providerKey (idempotent insert)", async () => {
     await processMercadoPagoPaymentWebhook(BASE_INPUT);
 
-    expect(mocks.prisma.webhookEvent.create).toHaveBeenCalledWith(
+    expect(mocks.prisma.webhookEvent.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
+        where: { providerKey: "mercado_pago:999:PAID" },
+        create: expect.objectContaining({
           providerObjectId: "999",
           eventType: "payment.updated",
+        }),
+        update: expect.objectContaining({
+          providerObjectId: "999",
         }),
       }),
     );
   });
 
-  it("updates existing webhook event instead of creating a duplicate", async () => {
-    mocks.prisma.webhookEvent.findUnique.mockResolvedValue({
-      id: "evt-existing",
-      processed: false,
-    });
-    mocks.prisma.webhookEvent.update.mockResolvedValueOnce({
-      id: "evt-existing",
-      processed: false,
+  it("treats unique-constraint race as dedup when concurrent webhook claims first", async () => {
+    const { Prisma } = await import("@prisma/client");
+    const dupErr = new Prisma.PrismaClientKnownRequestError(
+      "Unique constraint failed",
+      { code: "P2002", clientVersion: "test" },
+    );
+    mocks.prisma.webhookEvent.upsert.mockRejectedValueOnce(dupErr);
+    mocks.prisma.webhookEvent.findUnique.mockResolvedValueOnce({
+      id: "evt-1",
+      processed: true,
     });
 
-    await processMercadoPagoPaymentWebhook(BASE_INPUT);
+    const result = await processMercadoPagoPaymentWebhook(BASE_INPUT);
 
-    expect(mocks.prisma.webhookEvent.create).not.toHaveBeenCalled();
-    expect(mocks.prisma.webhookEvent.update).toHaveBeenCalled();
+    expect((result as { dedup?: boolean }).dedup).toBe(true);
+    expect(mocks.syncStoreCheckoutPayment).not.toHaveBeenCalled();
   });
 
   it("marks event as processed=true after successful sync", async () => {
@@ -272,5 +289,51 @@ describe("processMercadoPagoPaymentWebhook", () => {
     await processMercadoPagoPaymentWebhook(BASE_INPUT);
 
     expect(mocks.recordMercadoPagoFeeForCheckout).not.toHaveBeenCalled();
+  });
+
+  it("rejects PAID transition when amount paid diverges from expected (P0 guard)", async () => {
+    mocks.prisma.checkoutPayment.findUnique.mockResolvedValue({
+      id: "cp-1",
+      kind: "STORE_ORDER",
+      amountCents: 15000,
+    });
+    mocks.fetchMercadoPagoPaymentDetails.mockResolvedValue({
+      ...BASE_PAYMENT_DETAILS,
+      transaction_amount: 1, // R$ 1.00 vs expected R$ 150.00
+    });
+
+    const result = await processMercadoPagoPaymentWebhook(BASE_INPUT);
+
+    expect((result as { divergent?: boolean }).divergent).toBe(true);
+    expect(mocks.syncStoreCheckoutPayment).not.toHaveBeenCalled();
+    expect(mocks.recordMercadoPagoFeeForCheckout).not.toHaveBeenCalled();
+
+    const finalUpdate = mocks.prisma.webhookEvent.update.mock.calls.at(-1);
+    expect(finalUpdate?.[0].data.error).toMatch(/divergente/i);
+  });
+
+  it("rejects PAID transition when currency diverges from BRL (P0 guard)", async () => {
+    mocks.fetchMercadoPagoPaymentDetails.mockResolvedValue({
+      ...BASE_PAYMENT_DETAILS,
+      currency_id: "USD",
+    });
+
+    const result = await processMercadoPagoPaymentWebhook(BASE_INPUT);
+
+    expect((result as { divergent?: boolean }).divergent).toBe(true);
+    expect(mocks.syncStoreCheckoutPayment).not.toHaveBeenCalled();
+  });
+
+  it("allows PENDING transition even when amount has not yet been credited (no guard)", async () => {
+    mocks.fetchMercadoPagoPaymentDetails.mockResolvedValue({
+      ...BASE_PAYMENT_DETAILS,
+      status: "pending",
+      transaction_amount: 0,
+    });
+
+    const result = await processMercadoPagoPaymentWebhook(BASE_INPUT);
+
+    expect((result as { divergent?: boolean }).divergent).toBeUndefined();
+    expect(mocks.syncStoreCheckoutPayment).toHaveBeenCalled();
   });
 });

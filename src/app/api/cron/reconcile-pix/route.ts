@@ -9,7 +9,13 @@ function isAuthorized(request: Request) {
   const cronSecret = process.env.CRON_SECRET?.trim();
 
   if (!cronSecret) {
-    return process.env.VERCEL !== "1";
+    // In production we never accept calls without a secret — even outside
+    // Vercel's cron infrastructure (e.g. self-hosted) the endpoint must require
+    // an explicit Authorization header.
+    if (process.env.NODE_ENV === "production") {
+      return false;
+    }
+    return true;
   }
 
   const authHeader = request.headers.get("authorization");

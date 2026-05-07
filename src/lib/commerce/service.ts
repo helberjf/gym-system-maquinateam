@@ -15,6 +15,7 @@ import {
   NotFoundError,
 } from "@/lib/errors";
 import { hasPermission } from "@/lib/permissions";
+import { logger, serializeError } from "@/lib/observability/logger";
 import { buildOffsetPagination } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import { deleteFromR2 } from "@/lib/uploads/r2";
@@ -851,7 +852,9 @@ export async function updateProduct(
 
     deletionResults.forEach((result) => {
       if (result.status === "rejected") {
-        console.error("r2 delete error:", result.reason);
+        logger.error("commerce.r2_delete_failed", {
+          error: serializeError(result.reason),
+        });
       }
     });
   }

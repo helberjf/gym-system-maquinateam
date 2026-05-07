@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { registerStudent } from "@/lib/auth/service";
 import { ConflictError, handleRouteError, successResponse } from "@/lib/errors";
+import { logger, serializeError } from "@/lib/observability/logger";
 import {
   attachRateLimitHeaders,
   enforceRateLimit,
@@ -31,7 +32,13 @@ export async function POST(request: Request) {
     );
 
     if (deferredEmail) {
-      after(() => (deferredEmail as () => Promise<void>)().catch(console.error));
+      after(() =>
+        (deferredEmail as () => Promise<void>)().catch((error) => {
+          logger.error("auth.register.deferred_email_failed", {
+            error: serializeError(error),
+          });
+        }),
+      );
     }
 
     if (!result.ok) {

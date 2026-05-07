@@ -6,6 +6,7 @@ import {
   buildPublicPlanUpdateData,
   getFallbackPublicPlanId,
 } from "@/lib/billing/public-plan-resolver";
+import { logger, serializeError } from "@/lib/observability/logger";
 
 export type PublicPlanPeriodKey =
   | "monthly"
@@ -275,23 +276,21 @@ export const getPublicPlansCatalog = cache(async function getPublicPlansCatalog(
     let plans = await fetchActivePublicPlans();
 
     if (plans.length === 0) {
-      console.warn(
-        "Catalogo publico sem planos ativos. Sincronizando planos padrao no banco.",
-      );
+      logger.warn("billing.public_catalog.empty_seeding_defaults");
       await syncDefaultPublicPlansToDatabase();
       plans = await fetchActivePublicPlans();
     }
 
     if (plans.length === 0) {
-      console.warn(
-        "Catalogo publico sem planos ativos. Usando fallback estatico para manter a vitrine disponivel.",
-      );
+      logger.warn("billing.public_catalog.empty_using_fallback");
       return getFallbackPublicPlansCatalog();
     }
 
     return plans.map((plan) => mapPlanToPublicCard(plan));
   } catch (error) {
-    console.error("Falha ao carregar catalogo de planos.", error);
+    logger.error("billing.public_catalog.load_failed", {
+      error: serializeError(error),
+    });
     return getFallbackPublicPlansCatalog();
   }
 });

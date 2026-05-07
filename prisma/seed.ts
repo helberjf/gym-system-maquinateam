@@ -133,10 +133,42 @@ async function createPaidProductSale(input: {
   });
 }
 
+function ensureStrongSeedPassword(label: string, value: string) {
+  if (process.env.NODE_ENV !== "production") return;
+  const minLength = 12;
+  const hasLower = /[a-z]/.test(value);
+  const hasUpper = /[A-Z]/.test(value);
+  const hasDigit = /\d/.test(value);
+  const hasSymbol = /[^A-Za-z0-9]/.test(value);
+  const isWeak =
+    value.length < minLength || !hasLower || !hasUpper || !hasDigit || !hasSymbol;
+  if (isWeak) {
+    throw new Error(
+      `Refusing to seed ${label} in production: SEED_${label.toUpperCase()}_PASSWORD must be >=12 chars with mixed case, digits and symbols.`,
+    );
+  }
+  const wellKnown = ["Admin@123", "Equipe@123", "Aluno@123"];
+  if (wellKnown.includes(value)) {
+    throw new Error(
+      `Refusing to seed ${label} in production with the default example password.`,
+    );
+  }
+}
+
 async function main() {
+  if (process.env.NODE_ENV === "production" && process.env.SEED_ALLOW_PRODUCTION !== "1") {
+    throw new Error(
+      "Seeding is disabled in production. Set SEED_ALLOW_PRODUCTION=1 only when intentionally seeding a fresh production database.",
+    );
+  }
+
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "Admin@123";
   const defaultStaffPassword = process.env.SEED_STAFF_PASSWORD ?? "Equipe@123";
   const defaultStudentPassword = process.env.SEED_STUDENT_PASSWORD ?? "Aluno@123";
+
+  ensureStrongSeedPassword("admin", adminPassword);
+  ensureStrongSeedPassword("staff", defaultStaffPassword);
+  ensureStrongSeedPassword("student", defaultStudentPassword);
 
   const [adminHash, staffHash, studentHash] = await Promise.all([
     bcrypt.hash(adminPassword, 10),

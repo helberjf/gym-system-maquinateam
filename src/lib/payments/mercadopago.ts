@@ -6,6 +6,7 @@ import {
   UnauthorizedError,
 } from "@/lib/errors";
 import { getAppUrl } from "@/lib/app-url";
+import { logger } from "@/lib/observability/logger";
 
 type MercadoPagoPreferenceItem = {
   title: string;
@@ -59,6 +60,7 @@ export type MercadoPagoPaymentDetails = {
   payment_type_id?: string;
   payment_method_id?: string;
   transaction_amount?: number;
+  currency_id?: string;
   installments?: number;
   external_reference?: string;
   date_approved?: string;
@@ -348,6 +350,7 @@ export function getMercadoPagoFinancialSummary(
     externalReference: paymentDetails.external_reference ?? null,
     paymentType: paymentDetails.payment_type_id ?? null,
     paymentMethodId: paymentDetails.payment_method_id ?? null,
+    currency: paymentDetails.currency_id ?? null,
     installments: paymentDetails.installments ?? null,
     approvedAt: paymentDetails.date_approved ?? null,
     createdAt: paymentDetails.date_created ?? null,
@@ -384,9 +387,9 @@ export async function verifyMercadoPagoWebhookRequest(request: Request) {
       throw new UnauthorizedError("IP do webhook nao autorizado.");
     }
   } else if (process.env.NODE_ENV === "production") {
-    console.warn(
-      "mercadopago webhook: MP_WEBHOOK_ALLOWED_IPS nao configurado — qualquer IP pode chamar este endpoint. Configure a allowlist no painel do Vercel.",
-    );
+    logger.warn("mercadopago.webhook.ip_allowlist_missing", {
+      hint: "Configure MP_WEBHOOK_ALLOWED_IPS to restrict webhook callers.",
+    });
   }
 
   const webhookSecret = process.env.MP_WEBHOOK_SECRET?.trim();
