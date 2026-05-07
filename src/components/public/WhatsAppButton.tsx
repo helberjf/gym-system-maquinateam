@@ -1,8 +1,15 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { BRAND } from "@/lib/constants/brand";
 
 export function WhatsAppButton() {
+  const pathname = usePathname();
+
+  if (pathname === "/checkout/pix" || pathname === "/planos/pix") {
+    return null;
+  }
+
   return (
     <a
       href={BRAND.contact.whatsappUrl}

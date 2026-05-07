@@ -108,6 +108,20 @@ describe("getPixCheckoutStatus", () => {
     expect(result.checkoutPaymentId).toBe("cp-pix-1");
   });
 
+  it("returns payment data for a guest checkout URL linked to a newly created user", async () => {
+    mocks.prisma.checkoutPayment.findFirst.mockResolvedValue(
+      buildStoredCheckout({ userId: "created-user-1" }),
+    );
+
+    const result = await getPixCheckoutStatus({
+      checkoutPaymentId: "cp-pix-1",
+      userId: null,
+    });
+
+    expect(result.checkoutPaymentId).toBe("cp-pix-1");
+    expect(result.brCode).toBe("00020101...");
+  });
+
   it("returns payment data when userId matches the stored userId", async () => {
     mocks.prisma.checkoutPayment.findFirst.mockResolvedValue(
       buildStoredCheckout({ userId: "user-1" }),

@@ -20,6 +20,10 @@ export default async function PlanCheckoutSuccessPage({
   const params = await searchParams;
   const subscriptionId =
     typeof params.subscriptionId === "string" ? params.subscriptionId : "";
+  const status = typeof params.status === "string" ? params.status : "";
+  const isConfirmed = ["PAID", "APPROVED", "SUCCEEDED", "COMPLETED"].includes(
+    status.toUpperCase(),
+  );
   const session = await auth();
 
   const subscription =
@@ -49,12 +53,16 @@ export default async function PlanCheckoutSuccessPage({
           Checkout de planos
         </p>
         <h1 className="mt-4 text-4xl font-bold uppercase text-white sm:text-5xl">
-          Retorno recebido
+          {isConfirmed ? "Pagamento confirmado" : "Retorno recebido"}
         </h1>
         <p className="mt-4 text-sm leading-7 text-brand-gray-light sm:text-base">
           {subscription
-            ? `Recebemos o retorno do pagamento do plano ${subscription.plan.name}. Assim que o gateway confirmar a cobranca, sua assinatura sera ativada automaticamente.`
-            : "Recebemos o retorno do pagamento do plano. Assim que o gateway confirmar a cobranca, sua assinatura sera ativada automaticamente."}
+            ? isConfirmed
+              ? `Pagamento do plano ${subscription.plan.name} confirmado. Sua assinatura ja esta ativa.`
+              : `Recebemos o retorno do pagamento do plano ${subscription.plan.name}. Assim que o gateway confirmar a cobranca, sua assinatura sera ativada automaticamente.`
+            : isConfirmed
+              ? "Pagamento do plano confirmado. Sua assinatura foi ativada automaticamente."
+              : "Recebemos o retorno do pagamento do plano. Assim que o gateway confirmar a cobranca, sua assinatura sera ativada automaticamente."}
         </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">

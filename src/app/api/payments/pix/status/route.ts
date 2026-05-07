@@ -15,7 +15,7 @@ import { parseSearchParams } from "@/lib/validators";
 export const runtime = "nodejs";
 
 const pixStatusQuerySchema = z.object({
-  payment: z.string().uuid("ID de pagamento invalido."),
+  payment: z.string().trim().cuid("ID de pagamento invalido."),
 });
 
 export async function GET(request: Request) {

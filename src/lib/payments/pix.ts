@@ -79,7 +79,11 @@ export async function getPixCheckoutStatus(input: {
     throw new NotFoundError("Pagamento Pix nao encontrado.");
   }
 
-  if (checkoutPayment.userId && checkoutPayment.userId !== input.userId) {
+  if (
+    checkoutPayment.userId &&
+    input.userId &&
+    checkoutPayment.userId !== input.userId
+  ) {
     throw new NotFoundError("Pagamento Pix nao encontrado.");
   }
 
