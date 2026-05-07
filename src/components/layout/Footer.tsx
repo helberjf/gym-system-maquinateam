@@ -1,8 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
-import { BRAND } from "@/lib/constants/brand";
+import { getBrandConfig } from "@/lib/settings/service";
 
-export function Footer() {
+export async function Footer() {
+  const BRAND = await getBrandConfig();
   return (
     <footer className="mt-auto border-t border-brand-gray-mid bg-brand-black">
       <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 lg:px-8">

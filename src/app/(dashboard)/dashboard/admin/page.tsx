@@ -50,6 +50,9 @@ export default async function AdminDashboardPage() {
             <Button asChild variant="secondary" size="sm">
               <Link href="/dashboard/relatorios">Abrir relatorios</Link>
             </Button>
+            <Button asChild variant="secondary" size="sm">
+              <Link href="/dashboard/admin/configuracoes">Configuracoes</Link>
+            </Button>
             <Button asChild size="sm">
               <Link href="/dashboard/pagamentos">Operar financeiro</Link>
             </Button>
