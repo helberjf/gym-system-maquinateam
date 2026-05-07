@@ -47,13 +47,16 @@ export default async function AdminDashboardPage() {
         description="Acompanhe alunos, presenca, financeiro, estoque, treinos recentes e trilha de auditoria em um unico lugar."
         action={
           <div className="flex flex-wrap gap-3">
+            <Button asChild size="sm">
+              <Link href="/dashboard/admin/analytics">Maquina IA</Link>
+            </Button>
             <Button asChild variant="secondary" size="sm">
               <Link href="/dashboard/relatorios">Abrir relatorios</Link>
             </Button>
             <Button asChild variant="secondary" size="sm">
               <Link href="/dashboard/admin/configuracoes">Configuracoes</Link>
             </Button>
-            <Button asChild size="sm">
+            <Button asChild variant="secondary" size="sm">
               <Link href="/dashboard/pagamentos">Operar financeiro</Link>
             </Button>
           </div>
